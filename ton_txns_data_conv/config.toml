@@ -1,0 +1,28 @@
+# TON Information
+# (*): required
+
+[ton_info]
+# References:
+# - https://docs.ton.org/learn/overviews/addresses
+# - https://docs.ton.org/develop/dapps/cookbook#working-with-contracts-addresses
+
+# User-friendly address (*)
+user_friendly_address = ""
+
+# Raw address (*)
+# For more information, refer to:
+# https://ton.org/address/
+raw_address = ""
+
+[ton_api_info]
+# API Key for pytonapi library
+# Required when using pytonapi library
+# Reference:
+# - https://github.com/tonkeeper/pytonapi
+# - https://docs.tonconsole.com/tonapi
+api_key = ""
+
+[file_save_option]
+# Set to true if you want to save the files (default is false)
+save_allow_json = false
+save_allow_csv = false
