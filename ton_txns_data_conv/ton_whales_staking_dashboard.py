@@ -72,10 +72,12 @@ DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
 )
 
 # Initialize default values
-DEFAULT_TIMEZONE_OFFSET = config.get("staking_info", {}).get("timezone_offset", 0.1)
-DEFAULT_DAILY_FETCH_HOUR = config.get("staking_info", {}).get("daily_fech_hour", 0.1)
+DEFAULT_STAKING_CALC_ADJUST_VALUE = config.get("staking_info", {}).get(
+    "staking_calculation_adjustment_value", 0.1
+)
+DEFAULT_LOCAL_TIMEZONE = config.get("staking_info", {}).get("local_timezone", 0.1)
 DEFAULT_COUNTER_VAL = config.get("cryptact_info", {}).get("counter", "")
-TZ = timezone(timedelta(hours=DEFAULT_DAILY_FETCH_HOUR))
+TZ = timezone(timedelta(hours=DEFAULT_LOCAL_TIMEZONE))
 
 # Save Option
 SAVE_ALLOW_STKRWD = config.get("file_save_option", {}).get("save_allow_stkrwd", False)
@@ -151,6 +153,8 @@ async def get_staking_info(
         data = await response.json()
         if "result" in data and len(data["result"]) >= 4:
             return {
+                # UTC Time: 2024-07-15 08:00:00+00:00
+                # JST Time: 2024-07-15 17:00:00+09:00
                 "Timestamp": timestamp.astimezone(TZ),
                 "Seqno": seqno,
                 "Staked Amount": int(data["result"][0]["value"]) / 1e9,
@@ -435,14 +439,14 @@ def create_layout() -> html.Div:
                             "position": "relative",
                         },
                         children=[
-                            html.Label("Timezone Offset:", className="label"),
+                            html.Label("Adjust Value:", className="label"),
                             html.Div(
                                 style={"display": "flex", "align-items": "center"},
                                 children=[
                                     dcc.Input(
                                         id="adjust-val-input",
                                         type="number",
-                                        value=DEFAULT_TIMEZONE_OFFSET,
+                                        value=DEFAULT_STAKING_CALC_ADJUST_VALUE,
                                         className="input small-input",
                                     ),
                                     html.Span(
@@ -484,7 +488,7 @@ def create_layout() -> html.Div:
                                 min=0,
                                 max=23,
                                 step=1,
-                                value=DEFAULT_DAILY_FETCH_HOUR,
+                                value=DEFAULT_LOCAL_TIMEZONE,
                                 className="input small-input",
                             ),
                         ],
@@ -694,7 +698,7 @@ def update_graph(
     Args:
         data (Optional[List[Dict[str, Any]]]): Fetched staking data.
         selected_data (str): User-selected data type to display.
-        hour (int): Hour of the day for x-axis formatting.
+        hour (int): Hour offset for UTC conversion.
 
     Returns:
         go.Figure: Updated Plotly figure object.
@@ -705,8 +709,24 @@ def update_graph(
     df = pd.DataFrame(data)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"])
 
+    def to_utc(dt: pd.Timestamp, hour_offset: int) -> pd.Timestamp:
+        """
+        Convert local time to UTC.
+
+        Args:
+            dt (pd.Timestamp): Local timestamp.
+            hour_offset (int): Hour offset from UTC.
+
+        Returns:
+            pd.Timestamp: UTC timestamp.
+        """
+        return (dt - timedelta(hours=hour_offset)).replace(tzinfo=timezone.utc)
+
+    df["Timestamp_UTC"] = df["Timestamp"].apply(lambda x: to_utc(x, hour))
+
+    fig = go.Figure()
+
     if selected_data == "all":
-        fig = go.Figure()
         for column in [
             "Staked Amount",
             "Pending Deposit",
@@ -715,32 +735,34 @@ def update_graph(
         ]:
             fig.add_trace(
                 go.Scatter(
-                    x=df["Timestamp"], y=df[column], name=column, mode="lines+markers"
+                    x=df["Timestamp_UTC"],
+                    y=df[column],
+                    name=column,
+                    mode="lines+markers",
                 )
             )
     else:
-        fig = go.Figure(
+        fig.add_trace(
             go.Scatter(
-                x=df["Timestamp"],
+                x=df["Timestamp_UTC"],
                 y=df["Staked Amount"],
                 name="Staked Amount",
                 mode="lines+markers",
             )
         )
 
-    hour_str = f"{int(hour):02d}"  # Ensure two-digit format
     fig.update_layout(
-        xaxis_title="Date",
+        xaxis_title="Date (UTC)",
         yaxis_title="Amount",
         xaxis=dict(
-            tickformat=f"%Y-%m-%d {hour_str}:%M:%S",
+            tickformat="%Y-%m-%d %H:%M:%S UTC",
             tickmode="auto",
             nticks=20,
         ),
         hovermode="x unified",
     )
 
-    fig.update_traces(hovertemplate=f"%{{x|%Y-%m-%d {hour_str}:%M:%S}}<br>%{{y:.2f}}")
+    fig.update_traces(hovertemplate="%{x|%Y-%m-%d %H:%M:%S UTC}<br>%{y:.2f}")
 
     return fig
 
