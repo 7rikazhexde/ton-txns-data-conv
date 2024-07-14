@@ -1,14 +1,15 @@
 import datetime
 import os
 from pathlib import Path
+from typing import Any, Dict, List
+
 import pandas as pd
-from typing import List, Dict, Any
-from tomlkit.toml_file import TOMLFile
-from get_ton_transactions import (
-    get_recieve_txn_tonapi,
+from get_ton_txns_api import (
     get_recieve_txn_pytonapi,
+    get_recieve_txn_tonapi,
     nano_to_amount,
 )
+from tomlkit.toml_file import TOMLFile
 
 
 def create_cryptact_custom_csv(
@@ -106,14 +107,47 @@ def create_cryptact_custom_csv(
 
 
 if __name__ == "__main__":
+    from typing import Optional, TypedDict, cast
+
+    class TonApiInfo(TypedDict):
+        api_key: str
+
+    class TonInfo(TypedDict):
+        user_friendly_address: str
+
+    class FileSaveOption(TypedDict):
+        save_allow_json: bool
+        save_allow_csv: bool
+
+    class Config(TypedDict):
+        ton_api_info: TonApiInfo
+        ton_info: TonInfo
+        file_save_option: FileSaveOption
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_file_path = os.path.join(script_dir, "config.toml")
     toml_config = TOMLFile(config_file_path)
-    config = toml_config.read()
-    API_KEY = config.get("ton_api_info")["api_key"]
-    ACCOUNT_ID = config.get("ton_info")["raw_address"]
-    SAVE_JSON = config.get("file_save_option")["save_allow_json"]
-    SAVE_CSV = config.get("file_save_option")["save_allow_csv"]
+    config_data = toml_config.read()
+
+    if config_data is None:
+        raise ValueError("Failed to read config file")
+
+    # Convert TOMLDocument to Config
+    config = cast(
+        Config,
+        {
+            "ton_api_info": cast(TonApiInfo, config_data.get("ton_api_info", {})),
+            "ton_info": cast(TonInfo, config_data.get("ton_info", {})),
+            "file_save_option": cast(
+                FileSaveOption, config_data.get("file_save_option", {})
+            ),
+        },
+    )
+
+    API_KEY: Optional[str] = config["ton_api_info"].get("api_key")
+    ACCOUNT_ID: str = config["ton_info"]["user_friendly_address"]
+    SAVE_JSON: bool = config["file_save_option"]["save_allow_json"]
+    SAVE_CSV: bool = config["file_save_option"]["save_allow_csv"]
 
     # Retrieve transactions using pytonapi with API key
     if API_KEY:
