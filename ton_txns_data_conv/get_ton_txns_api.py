@@ -1,12 +1,13 @@
-from pytonapi import Tonapi
 import datetime
-from tomlkit.toml_file import TOMLFile
-from typing import List, Dict, Any
-import requests
 import json
-from pytonapi.schema.blockchain import Transaction
 import os
 from pathlib import Path
+from typing import Any, Dict, List, TypedDict, Union, cast
+
+import requests
+from pytonapi import Tonapi
+from pytonapi.schema.blockchain import Transaction
+from tomlkit.toml_file import TOMLFile
 
 
 def nano_to_amount(value: int, precision: int = 9) -> float:
@@ -28,19 +29,14 @@ def nano_to_amount(value: int, precision: int = 9) -> float:
     if not isinstance(precision, int) or precision < 0:
         raise ValueError("Precision must be a non-negative integer.")
 
-    ton_value = value / 10**precision
-    return ton_value
+    result: float = value / (10**precision)
+    return result
 
 
-def convert_to_dict(obj: List[Transaction]) -> List[Dict[str, Any]]:
-    """Recursively converts a list of Transaction objects to a list of dictionaries.
-
-    Args:
-        obj (List[Transaction]): The list of Transaction objects to convert.
-
-    Returns:
-        List[Dict[str, Any]]: The converted list of dictionaries.
-    """
+def convert_to_dict(
+    obj: Union[List[Transaction], Transaction, Dict[str, Any], Any],
+) -> Union[List[Dict[str, Any]], Dict[str, Any], Any]:
+    """Recursively converts a list of Transaction objects to a list of dictionaries."""
     if isinstance(obj, list):
         return [convert_to_dict(item) for item in obj]
     elif isinstance(obj, dict):
@@ -60,28 +56,14 @@ def convert_to_dict(obj: List[Transaction]) -> List[Dict[str, Any]]:
 def get_recieve_txn_pytonapi(
     api_key: str, account_id: str, save_json: bool = False
 ) -> List[Dict[str, Any]]:
-    """Retrieves transaction data using the pytonapi library and saves the data as a JSON file if requested.
-
-    pytonapi is a Python library for interacting with the TON API.
-    GitHub repository: https://github.com/tonkeeper/pytonapi
-
-    Args:
-        api_key (str): The API key for authentication.
-        account_id (str): The account ID to retrieve transactions for.
-        save_json (bool, optional): Whether to save the response as a JSON file. If set to True,
-                                    the JSON file will contain all transactions, including those with
-                                    a value of 0 in the `in_msg` field. If a file with the same name
-                                    already exists, the user will be prompted to overwrite it or not.
-                                    Defaults to False.
-
-    Returns:
-        List[Dict[str, Any]]: The transaction data as a list of dictionaries.
-    """
+    """Retrieves transaction data using the pytonapi library and saves the data as a JSON file if requested."""
     tonapi = Tonapi(api_key=api_key)
     response = tonapi.blockchain.get_account_transactions(
         account_id=account_id, limit=1000
     )
     transactions_dict = convert_to_dict(response.transactions)
+    assert isinstance(transactions_dict, list), "Expected a list of transactions"
+
     if save_json:
         d_today = datetime.date.today()
         num_transactions = len(transactions_dict)
@@ -109,30 +91,16 @@ def get_recieve_txn_pytonapi(
 def get_recieve_txn_tonapi(
     account_id: str, limit: int = 100, sort_order: str = "desc", save_json: bool = False
 ) -> List[Dict[str, Any]]:
-    """Retrieves transaction data using the TON API and saves the data as a JSON file if requested.
-
-    TON API documentation: https://docs.tonconsole.com/tonapi
-
-    Args:
-        account_id (str): The account ID to retrieve transactions for.
-        limit (int, optional): The maximum number of transactions to retrieve. Defaults to 100.
-        sort_order (str, optional): The sort order for the transactions. Defaults to "desc" (descending).
-        save_json (bool, optional): Whether to save the response as a JSON file. If set to True,
-                                    the JSON file will contain all transactions, including those with
-                                    a value of 0 in the `in_msg` field. If a file with the same name
-                                    already exists, the user will be prompted to overwrite it or not.
-                                    Defaults to False.
-
-    Returns:
-        List[Dict[str, Any]]: The transaction data as a list of dictionaries.
-    """
+    """Retrieves transaction data using the TON API and saves the data as a JSON file if requested."""
     url = f"https://tonapi.io/v2/blockchain/accounts/{account_id}/transactions"
-    params = {"limit": limit, "sort_order": sort_order}
+    params: Dict[str, Union[int, str]] = {"limit": limit, "sort_order": sort_order}
     headers = {"accept": "application/json"}
 
     response = requests.get(url, params=params, headers=headers)
     data = response.json()
     transactions_dict = data["transactions"]
+    assert isinstance(transactions_dict, list), "Expected a list of transactions"
+
     if save_json:
         d_today = datetime.date.today()
         num_transactions = len(transactions_dict)
@@ -157,15 +125,47 @@ def get_recieve_txn_tonapi(
     return transactions_dict
 
 
+class TonInfo(TypedDict):
+    user_friendly_address: str
+    raw_address: str
+    pool_address: str
+    get_member_use_address: str
+
+
+class StakingInfo(TypedDict):
+    calc_adjust_val: float
+    calc_hour_val: int
+
+
+class TonApiInfo(TypedDict):
+    api_key: str
+
+
+class FileSaveOption(TypedDict):
+    save_allow_json: bool
+    save_allow_csv: bool
+
+
+class Config(TypedDict):
+    ton_info: TonInfo
+    staking_info: StakingInfo
+    ton_api_info: TonApiInfo
+    file_save_option: FileSaveOption
+
+
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_file_path = os.path.join(script_dir, "config.toml")
     toml_config = TOMLFile(config_file_path)
-    config = toml_config.read()
-    API_KEY = config.get("ton_api_info")["api_key"]
-    ACCOUNT_ID = config.get("ton_info")["raw_address"]
-    SAVE_JSON = config.get("file_save_option")["save_allow_json"]
-    SAVE_CSV = config.get("file_save_option")["save_allow_csv"]
+    config_data = toml_config.read()
+    if config_data is None:
+        raise ValueError("Failed to read config file")
+    config = cast(Config, config_data)
+
+    API_KEY = config["ton_api_info"]["api_key"]
+    ACCOUNT_ID = config["ton_info"]["user_friendly_address"]
+    SAVE_JSON = config["file_save_option"]["save_allow_json"]
+    SAVE_CSV = config["file_save_option"]["save_allow_csv"]
 
     # Retrieve transactions using pytonapi with API key
     if API_KEY:
