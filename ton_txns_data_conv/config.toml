@@ -36,6 +36,8 @@ get_member_use_address = ""
 [staking_info]
 # Settings for calculating staking rewards
 
+# Use Timezone for Tonhub API V4
+# Required when getting TON staking data.
 # Important:
 #   TON transactions do not have a schema for recording individual staking reward data for each stake source address.
 #   Therefore, staking reward data is calculated and generated from the stake originator's balance obtained from the block information.
@@ -43,20 +45,14 @@ get_member_use_address = ""
 #   and if the value is above the threshold, the reward is considered granted.
 #   The amount of reward depends on the number of stakes.
 #   Please change Adjust Value to match the value of AMOUNT on the graph.
-
-# Use Timezone for Tonhub API V4
-# Note:
-#   Required when getting TON staking data.
-#   The timezone in this script is set to Japan Standard Time (JST).
-#   If you're in a different timezone, you need to modify the `timezone_offset` to match your local timezone.
-timezone_offset = 5
+staking_calculation_adjustment_value = 5
 
 # Use Hour Infomation for Tonhub API V4
 # Note:
 #   Required when getting TON staking data.
-#   This script retrieves block information for each day by specifying the date and time.
-#   This value is used as the time information.
-daily_fech_hour = 9
+#   The timezone in this script is set to Japan Standard Time (JST).
+#   If you're in a different timezone, you need to modify the `local_timezone` to match your local timezone.
+local_timezone = 9
 
 [ton_api_info]
 # API Key for pytonapi library
