@@ -22,12 +22,13 @@ TON トランザクションデータコンバーターは、TONブロックチ�
 ## 使用方法
 
 > [!IMPORTANT]
-> このプロジェクトは `TON API` と `pytonapi`、`pytoniq_core` を使用しています。
+> このプロジェクトでは以下のプロジェクトを使用しています。
 >
-> 詳細は以下をご確認ください。
-> - <https://tonapi.io/>
-> - <https://github.com/tonkeeper/pytonapi>
-> - <https://github.com/yungwine/pytoniq>
+> - `TON API`: <https://tonapi.io/>
+> - `pytonapi`: <https://github.com/tonkeeper/pytonapi>
+> - `pytoniq_core`: <https://github.com/yungwine/pytoniq>
+> - `TON Index(API V3)`: <https://toncenter.com/api/v3/>
+> - `ton-api-v4`: <https://github.com/ton-community/ton-api-v4>
 
 ### インストール
 
@@ -65,14 +66,14 @@ pip install -r requirements.txt requirements-dev.txt
 
 プロジェクトのユーザー情報を[config.toml](./ton_txns_data_conv/config.toml)で編集してください。
 このファイルには、`TON APIキー`[^1]、TONアドレス、ファイル保存オプションの設定が含まれています。
-[^1]: pytonapiライブラリを使用する際に必要です。
+[^1]: pytonapiライブラリを使用する際に必要ですが、最新版コードでは`TON Index(API V3)`に変更しているため将来的に削除する可能性があります。
       詳細は <https://docs.tonconsole.com/tonapi> をご確認ください。
 
 ## 機能
 
 ### 全トランザクション情報の取得
 
-`TON API`を使用して、アドレスに関連する全てのトランザクションデータを取得します。
+`TON Index(API V3)`を使用して、アドレス(`user_friendly_address`)に関連する取引データを指定された期間分(`transaction_history_period`:デフォルト365日)取得する
 
 ```bash
 python get_ton_txns_api.py

@@ -22,12 +22,13 @@ The TON Transactions data converter is a project aimed at retrieving and convert
 ## Usage
 
 > [!IMPORTANT]
-> This project uses `TON API` and `pytonapi`, `pytoniq_core`.
+> This project uses the following projects:
 >
-> Please check below for details.
-> - <https://tonapi.io/>
-> - <https://github.com/tonkeeper/pytonapi>
-> - <https://github.com/yungwine/pytoniq>
+> - `TON API`: <https://tonapi.io/>
+> - `pytonapi`: <https://github.com/tonkeeper/pytonapi>
+> - `pytoniq_core`: <https://github.com/yungwine/pytoniq>
+> - `TON Index(API V3)`: <https://toncenter.com/api/v3/>
+> - `ton-api-v4`: <https://github.com/ton-community/ton-api-v4>
 
 ### Install
 
@@ -65,14 +66,14 @@ pip install -r requirements.txt requirements-dev.txt
 
 Edit [config.toml](./ton_txns_data_conv/config.toml) with your user information for the project.  
 This file contains settings for your `TON API key`[^1], TON address, and file saving options.  
-[^1]: Required when using pytonapi library.  
+[^1]: Required when using the pytonapi library, but may be removed in the future as the latest version of the code changes it to `TON Index(API V3)`.
       Please check for details <https://docs.tonconsole.com/tonapi>
 
 ## Feature
 
 ### Get all transaction information
 
-Use `TON API` to get all the transactitions data associated with the address.
+Use `TON Index(API V3)` to retrieve transaction data associated with an address (`user_friendly_address`) for a specified period (`transaction_history_period`: default 365 days).
 
 ```bash
 python get_ton_txns_api.py
