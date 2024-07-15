@@ -248,7 +248,7 @@ def calculate_staking_rewards(df: pd.DataFrame, adjust_val: float) -> pd.DataFra
         difference = current_amount - previous_amount
 
         if 0 < difference <= adjust_val:
-            timestamp = pd.to_datetime(df.iloc[i]["Timestamp"])
+            timestamp = pd.to_datetime(df.iloc[i]["Original_Timestamp"])
             results.append(
                 {
                     "Timestamp": f"'{timestamp.strftime('%Y/%m/%d %H:%M:%S')}",
@@ -637,6 +637,15 @@ def fetch_data(
             )
 
         df = pd.DataFrame(history)
+        # Keep original timestamp for CSV saving
+        df["Original_Timestamp"] = df["Timestamp"]
+        # Convert to UTC for graph display
+        df["Timestamp"] = df["Timestamp"].apply(
+            lambda x: x.astimezone(timezone.utc).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        )
+
         message = f"Data fetched successfully. {len(df)} records retrieved."
 
         if SAVE_ALLOW_STKRWD:
@@ -649,8 +658,16 @@ def fetch_data(
                     output_dir
                     / f"ton_whales_staking_amount_history_N={num}_{d_today}.csv"
                 )
-                df.to_csv(
-                    csv_file_path, index=False, quoting=csv.QUOTE_NONE, escapechar="\\"
+                # Use Original_Timestamp for CSV saving
+                df_to_save = df.copy()
+                df_to_save["Timestamp"] = df_to_save["Original_Timestamp"]
+                df_to_save = df_to_save.drop(columns=["Original_Timestamp"])
+                df_to_save.to_csv(
+                    csv_file_path,
+                    index=False,
+                    quoting=csv.QUOTE_NONE,
+                    escapechar="\\",
+                    date_format="%Y-%m-%d %H:%M:%S",
                 )
                 message += f" Data saved to {csv_file_path}"
             except Exception as save_error:
@@ -709,21 +726,6 @@ def update_graph(
     df = pd.DataFrame(data)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"])
 
-    def to_utc(dt: pd.Timestamp, hour_offset: int) -> pd.Timestamp:
-        """
-        Convert local time to UTC.
-
-        Args:
-            dt (pd.Timestamp): Local timestamp.
-            hour_offset (int): Hour offset from UTC.
-
-        Returns:
-            pd.Timestamp: UTC timestamp.
-        """
-        return (dt - timedelta(hours=hour_offset)).replace(tzinfo=timezone.utc)
-
-    df["Timestamp_UTC"] = df["Timestamp"].apply(lambda x: to_utc(x, hour))
-
     fig = go.Figure()
 
     if selected_data == "all":
@@ -735,7 +737,7 @@ def update_graph(
         ]:
             fig.add_trace(
                 go.Scatter(
-                    x=df["Timestamp_UTC"],
+                    x=df["Timestamp"],
                     y=df[column],
                     name=column,
                     mode="lines+markers",
@@ -744,7 +746,7 @@ def update_graph(
     else:
         fig.add_trace(
             go.Scatter(
-                x=df["Timestamp_UTC"],
+                x=df["Timestamp"],
                 y=df["Staked Amount"],
                 name="Staked Amount",
                 mode="lines+markers",
@@ -787,7 +789,7 @@ def generate_reward_history(
     end_date: str,
 ) -> Tuple[bool, str]:
     """
-    Generate and save staking reward history.
+    Generate and save stake compensation history in local time zone.
 
     Args:
         n_clicks (Optional[int]): Number of times the button was clicked.

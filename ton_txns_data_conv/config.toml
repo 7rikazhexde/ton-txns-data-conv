@@ -11,7 +11,7 @@
 # This is the human-readable form of your TON wallet address
 user_friendly_address = ""
 
-# Raw address (*)
+# Raw address
 # This is the base64 encoded form of your TON wallet address
 # For more information, refer to: https://ton.org/address/
 raw_address = ""
@@ -32,6 +32,14 @@ pool_address = ""
 #   3. Go to Details in Your Pools and activate developer mode (F12)
 #   4. Check the GET request for the get_member command in the Network tab of the developer tools
 get_member_use_address = ""
+
+# Transaction History Period (*)
+# Obtains transaction history for the "transaction_history_period" period
+# based on the timestamp at the time the script is executed. (default is 365)
+# Reference: https://toncenter.com/api/v3/#/default/get_transactions_api_v3_transactions_get
+#   start_utime: Query transactions with generation UTC timestamp after given timestamp.
+#   end_utime: Query transactions with generation UTC timestamp before given timestamp.
+transaction_history_period = 365
 
 [staking_info]
 # Settings for calculating staking rewards
