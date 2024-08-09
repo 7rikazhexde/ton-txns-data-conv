@@ -134,7 +134,7 @@ python get_latest_ton_amount_calculation.py
 - `ton-api-v4`を使用してステーキングで指定プールでステーキング中のToncoinの総量を取得します。
 
 > [!NOTE]
-> ステーキング情報の取得処理は[Visualize TON Whales Staking Amount History](#visualize-ton-whales-staking-amount-history)と同様です。
+> ステーキング情報の取得処理は[TON Whalesのステーキング報酬履歴の可視化](#ton-whalesのステーキング報酬履歴の可視化)と同様です。
 
 ## 免責事項
 
