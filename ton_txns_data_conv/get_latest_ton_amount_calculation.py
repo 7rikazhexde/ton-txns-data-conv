@@ -125,12 +125,12 @@ if __name__ == "__main__":
     if response:
         print(f"Timestamp: {response["Timestamp"]}")
         print(f"Total Staked Amount: {response["Total Staked Amount"]}")
-        print(f"balance: {balance}")
+        print(f"Balance: {balance}")
         hold_ton = balance + response["Total Staked Amount"]
-        print(f"hold_ton: {hold_ton}")
+        print(f"Hold Ton: {hold_ton}")
         rate = ton_rate_by_ticker()
         price = rate * hold_ton
-        print(f"rate: {rate} my_account_hold_ton_price: {price}")
-        print(f"my_account_hold_ton_price: {symbol}{price}")
+        print(f"Rate: {rate}")
+        print(f"My account hold TON price: {symbol}{price}")
     else:
         print("Failed to get staking info.")

@@ -126,7 +126,7 @@ python ton_whales_staking_dashboard.py
 アカウントが保有するトンコインの総量とレート価格を取得して総額を計算します。
 
 ```bash
-python get_latest_ton_amount_calculation.py
+python get_latest_ton_amount_calculation_asyncio.py
 ```
 
 - `TON API:(/v2/accounts/{account_id})`を使用してアカウントが保有するToncoin(`balance`)を取得します。

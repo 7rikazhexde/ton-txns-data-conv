@@ -126,7 +126,7 @@ This script creates a Dash web application that allows you to:
 Get the total amount of Toncoin held by the account and the rate price to calculate the total amount.
 
 ```bash
-python get_latest_ton_amount_calculation.py
+python get_latest_ton_amount_calculation_asyncio.py
 ```
 
 - Use `TON API:(/v2/accounts/{account_id})` to get the Toncoin (`balance`) held by the account.
