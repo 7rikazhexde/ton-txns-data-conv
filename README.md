@@ -17,6 +17,7 @@ The TON Transactions data converter is a project aimed at retrieving and convert
     - [Get all transaction information](#get-all-transaction-information)
     - [Creating custom files for cryptact](#creating-custom-files-for-cryptact)
     - [Visualize TON Whales Staking Amount History](#visualize-ton-whales-staking-amount-history)
+    - [Calculate the total amount of Toncoin held by the account](#calculate-the-total-amount-of-toncoin-held-by-the-account)
   - [Disclaimer](#disclaimer)
 
 ## Usage
@@ -119,6 +120,21 @@ This script creates a Dash web application that allows you to:
 > - Use the "Go Staking Stats" button to open your TON Whales staking statistics in a new browser tab.
 > - Hover over the question mark icons (?) next to input fields for tooltips. These provide important information about how to use each field and how staking rewards are calculated.
 > - The "Staking Pool Member Address" field has a tooltip explaining how to find the correct address to use, including a link to the TON Whales Staking page that opens in a new tab.
+
+### Calculate the total amount of Toncoin held by the account
+
+Get the total amount of Toncoin held by the account and the rate price to calculate the total amount.
+
+```bash
+python get_latest_ton_amount_calculation.py
+```
+
+- Use `TON API:(/v2/accounts/{account_id})` to get the Toncoin (`balance`) held by the account.
+- Use `TON API:(/v2/rates)` to get the rate of Toncoin against Ticker.
+- Use `TON-API-v4` to get the total amount of Toncoin in staking in a specified pool in staking.
+
+> [!NOTE]
+> The process for obtaining staking information is the same as for [Visualize TON Whales Staking Amount History](#visualize-ton-whales-staking-amount-history).
 
 ## Disclaimer
 
