@@ -80,8 +80,8 @@ async def get_latest_block(
     data = await fetch_data(session, base_url)
     seqno = data["last"]["seqno"]
     ts_utc = datetime.fromtimestamp(data["now"], tz=timezone.utc)
-    ts_jst = ts_utc.astimezone(timezone(timedelta(hours=9)))
-    return seqno, ts_utc, ts_jst
+    ts_local = ts_utc.astimezone(TZ)
+    return seqno, ts_utc, ts_local
 
 
 async def get_staking_info(
@@ -134,7 +134,7 @@ async def main() -> None:
     async with aiohttp.ClientSession() as session:
         try:
             latest_block = await get_latest_block(session)
-            seqno, ts_utc, ts_jst = latest_block
+            seqno, ts_utc, ts_local = latest_block
 
             tasks = [
                 get_staking_info(
@@ -153,7 +153,7 @@ async def main() -> None:
                 Tuple[Optional[Dict[str, Any]], float, float], results
             )
 
-            print(f"seqno: {seqno} / utc:{ts_utc} / jst:{ts_jst}")
+            print(f"seqno: {seqno} / utc:{ts_utc} / local:{ts_local}")
 
             if staking_info:
                 hold_ton = balance + staking_info["Total Staked Amount"]

@@ -65,10 +65,8 @@ def get_latest_block() -> Tuple[int, datetime, datetime]:
     data = response.json()
     seqno = data["last"]["seqno"]
     ts_utc = datetime.fromtimestamp(data["now"], tz=timezone.utc)
-    ts_jst = datetime.fromtimestamp(data["now"], tz=timezone.utc).astimezone(
-        timezone(timedelta(hours=9))
-    )
-    return seqno, ts_utc, ts_jst
+    ts_local = ts_utc.astimezone(TZ)
+    return seqno, ts_utc, ts_local
 
 
 def get_staking_info(
@@ -116,8 +114,8 @@ def get_ton_balance(user_friendly_address: str) -> float:
 
 
 if __name__ == "__main__":
-    seqno, ts_utc, ts_jst = get_latest_block()
-    print(f"seqno: {seqno} / utc:{ts_utc} / jst:{ts_jst}")
+    seqno, ts_utc, ts_local = get_latest_block()
+    print(f"seqno: {seqno} / utc:{ts_utc} / local:{ts_local}")
     balance = get_ton_balance(DEFAULT_UF_ADDRESS)
     response = get_staking_info(
         seqno, ts_utc, DEFAULT_POOL_ADDRESS, DEFAULT_GET_MEMBER_USER_ADDRESS
