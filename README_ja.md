@@ -77,7 +77,7 @@ pip install -r requirements.txt requirements-dev.txt
 `TON Index(API V3)`を使用して、アドレス(`user_friendly_address`)に関連する取引データを指定された期間分(`transaction_history_period`:デフォルト365日)取得する
 
 ```bash
-python get_ton_txns_api.py
+python ton_txns_data_conv/account/get_ton_txns_api.py
 ```
 
 ### cryptact用カスタムファイルの作成
@@ -90,7 +90,7 @@ python get_ton_txns_api.py
 > - TONブロックチェーンでは、ステーキング報酬と他のトランザクションを区別するための特定のキー/値ペアがありません。そのため、CSVファイルにはステーキングに関連しない他のウォレットからのトランザクションが含まれる可能性があります。CSVファイルからステーキングに関連しないデータを手動で削除してください。
 
 ```bash
-python create_ton_stkrwd_cryptact_custom.py
+python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 ```
 
 ### TON Whalesのステーキング報酬履歴の可視化
@@ -101,7 +101,7 @@ python create_ton_stkrwd_cryptact_custom.py
 *TON Whalesステーキング報酬履歴ダッシュボードのスクリーンショット*
 
 ```bash
-python ton_whales_staking_dashboard.py
+python ton_txns_data_conv/staking/ton_whales_staking_dashboard.py
 ```
 
 このスクリプトは以下の機能を持つDashウェブアプリケーションを作成します：
@@ -126,7 +126,7 @@ python ton_whales_staking_dashboard.py
 アカウントが保有するトンコインの総量とレート価格を取得して総額を計算します。
 
 ```bash
-python get_latest_ton_amount_calculation_asyncio.py
+python ton_txns_data_conv/account/get_latest_ton_amount_calculation.py
 ```
 
 - `TON API:(/v2/accounts/{account_id})`を使用してアカウントが保有するToncoin(`balance`)を取得します。

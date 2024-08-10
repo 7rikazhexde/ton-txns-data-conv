@@ -5,6 +5,9 @@ description = "The TON Transactions data converter is a project aimed at retriev
 authors = ["7rikazhexde"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "ton_txns_data_conv" },
+]
 package-mode = false
 
 [tool.poetry.dependencies]
@@ -19,6 +22,8 @@ types-requests = "^2.32.0.20240622"
 dash-bootstrap-components = "^1.6.0"
 pytoniq-core = "^0.1.36"
 babel = "^2.16.0"
+httpx = "^0.27.0"
+python-dotenv = "^1.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

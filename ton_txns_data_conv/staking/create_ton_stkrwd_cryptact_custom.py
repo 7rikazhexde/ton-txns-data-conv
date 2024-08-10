@@ -1,15 +1,19 @@
 import datetime
-import os
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, cast
+from typing import Any, Dict, List, Optional, TypedDict
 
 import pandas as pd
-from get_ton_txns_api import (
+
+project_root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(project_root))
+
+from ton_txns_data_conv.account.get_ton_txns_api import (
     get_recieve_txn_pytonapi,
     get_transactions_v3,
     nano_to_amount,
 )
-from tomlkit.toml_file import TOMLFile
+from ton_txns_data_conv.utils.config_loader import load_config
 
 
 def create_cryptact_custom_data(
@@ -138,7 +142,7 @@ def create_cryptact_custom_csv(
     d_today = datetime.date.today()
     num_transactions = len(df)
 
-    output_dir = Path(__file__).parent / "output"
+    output_dir = project_root / "ton_txns_data_conv" / "output"
     output_dir.mkdir(exist_ok=True)
 
     if filename:
@@ -185,16 +189,6 @@ class Config(TypedDict):
     staking_info: StakingInfo
     ton_api_info: TonApiInfo
     file_save_option: FileSaveOption
-
-
-def load_config() -> Config:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_file_path = os.path.join(script_dir, "config.toml")
-    toml_config = TOMLFile(config_file_path)
-    config_data = toml_config.read()
-    if config_data is None:
-        raise ValueError("Failed to read config file")
-    return cast(Config, config_data)
 
 
 if __name__ == "__main__":

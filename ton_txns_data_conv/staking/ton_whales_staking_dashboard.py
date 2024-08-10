@@ -10,9 +10,7 @@ and allows users to save staking reward history.
 
 import asyncio
 import csv
-import os
 import sys
-import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -25,22 +23,14 @@ from dash import Dash, dcc, html
 from dash.dependencies import Input, Output, State
 from pytoniq_core import Address
 from pytoniq_core.boc.address import AddressError
-from tomlkit.toml_file import TOMLFile
+
+project_root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(project_root))
+
+from ton_txns_data_conv.utils.config_loader import load_config
 
 # Load configuration
-script_dir = os.path.dirname(os.path.abspath(__file__))
-config_file_path = os.path.join(script_dir, "config.toml")
-
-if not os.path.exists(config_file_path):
-    print(f"Error: Configuration file not found at {config_file_path}.")
-    sys.exit(1)
-
-try:
-    toml_config = TOMLFile(config_file_path)
-    config = toml_config.read()
-except Exception as e:
-    print(f"Error: Failed to read configuration file. {str(e)}")
-    sys.exit(1)
+config = load_config()
 
 # TON Address Info
 DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
@@ -268,7 +258,8 @@ def calculate_staking_rewards(df: pd.DataFrame, adjust_val: float) -> pd.DataFra
 
 
 # Initialize Dash app
-app = Dash(__name__, assets_folder="assets")
+assets_folder_path = project_root / "ton_txns_data_conv" / "assets"
+app = Dash(__name__, assets_folder=assets_folder_path)
 app.title = "TON Whales Staking Amount History"
 
 app.clientside_callback(
@@ -652,7 +643,7 @@ def fetch_data(
             try:
                 d_today = datetime.today().date()
                 num = len(df)
-                output_dir = Path(__file__).parent / "output"
+                output_dir = project_root / "ton_txns_data_conv" / "output"
                 output_dir.mkdir(exist_ok=True)
                 csv_file_path = (
                     output_dir
@@ -679,25 +670,51 @@ def fetch_data(
 
 
 @app.callback(
-    Output("output-message", "children", allow_duplicate=True),
+    Output("dummy-output", "children", allow_duplicate=True),
     Input("go-staking-stats-button", "n_clicks"),
     prevent_initial_call=True,
 )
 def open_staking_stats(n_clicks: Optional[int]) -> str:
     """
-    Open TON Whales Staking Stats page in a new browser tab.
+    Open the TON Whales Staking Stats page in a new browser tab.
+
+    This function is triggered when the "Go Staking Stats" button is clicked.
+    It generates a JavaScript command to open the TON Whales Staking Stats page
+    for the specified TON address in a new tab.
 
     Args:
-        n_clicks (Optional[int]): Number of times the button was clicked.
+        n_clicks (Optional[int]): The number of times the button has been clicked.
+                                  This is automatically provided by Dash.
 
     Returns:
-        str: Status message.
+        str:
+            - A string containing a JavaScript command to open a new tab if the button was clicked.
+            - A string indicating no action was taken if the function was called without a button click
+              (e.g., on initial load).
+
+    Note:
+        The function uses the BASIC_WORKCHAIN_ADDRESS global variable to construct the URL.
+        This address should be set elsewhere in the application.
     """
     if n_clicks is not None:
         url = f"https://tonwhales.com/staking/address/{BASIC_WORKCHAIN_ADDRESS}"
-        webbrowser.open(url)
-        return "Opened TON Whales Staking Stats page in a new browser tab."
+        return f"window.open('{url}', '_blank')"
     return "No action taken."
+
+
+# Client-side callbacks
+app.clientside_callback(
+    """
+    function(children) {
+        if (children) {
+            eval(children);
+        }
+        return '';
+    }
+    """,
+    Output("dummy-output", "children"),
+    Input("dummy-output", "children"),
+)
 
 
 @app.callback(
@@ -809,7 +826,7 @@ def generate_reward_history(
     d_today = datetime.today().date()
     num = len(reward_df)
 
-    output_dir = Path(__file__).parent / "output"
+    output_dir = project_root / "ton_txns_data_conv" / "output"
     output_dir.mkdir(exist_ok=True)
 
     filename = f"staking_history_{start_date}_to_{end_date}_adj{adjust_val}_N{num}_{d_today}.csv"
@@ -863,7 +880,7 @@ def handle_overwrite_confirmation(
     d_today = datetime.today().date()
     num = len(reward_df)
 
-    output_dir = Path(__file__).parent / "output"
+    output_dir = project_root / "ton_txns_data_conv" / "output"
     output_dir.mkdir(exist_ok=True)
 
     filename = f"staking_history_{start_date}_to_{end_date}_adj{adjust_val}_N{num}_{d_today}.csv"

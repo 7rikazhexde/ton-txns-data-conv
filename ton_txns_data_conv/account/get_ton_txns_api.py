@@ -1,14 +1,18 @@
 import json
-import os
+import sys
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, Union, cast
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import requests
 from pytonapi import Tonapi
 from pytonapi.schema.blockchain import Transaction
-from tomlkit.toml_file import TOMLFile
+
+project_root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(project_root))
+
+from ton_txns_data_conv.utils.config_loader import load_config
 
 
 def nano_to_amount(value: int, precision: int = 9) -> float:
@@ -85,7 +89,8 @@ def save_json_file(data: List[Dict[str, Any]], filename: str) -> None:
         >>> save_json_file(data, "example.json")
         JSON file saved: /path/to/output/example.json
     """
-    output_dir = Path(__file__).parent / "output"
+    # output_dir = Path(__file__).parent / "output"
+    output_dir = project_root / "ton_txns_data_conv" / "output"
     output_dir.mkdir(exist_ok=True)
     json_file_path = output_dir / filename
 
@@ -300,16 +305,6 @@ class Config(TypedDict):
     staking_info: StakingInfo
     ton_api_info: TonApiInfo
     file_save_option: FileSaveOption
-
-
-def load_config() -> Config:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_file_path = os.path.join(script_dir, "config.toml")
-    toml_config = TOMLFile(config_file_path)
-    config_data = toml_config.read()
-    if config_data is None:
-        raise ValueError("Failed to read config file")
-    return cast(Config, config_data)
 
 
 if __name__ == "__main__":

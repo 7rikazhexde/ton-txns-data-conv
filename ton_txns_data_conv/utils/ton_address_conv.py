@@ -1,24 +1,15 @@
-import os
 import sys
+from pathlib import Path
+
+project_root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(project_root))
 
 from pytoniq_core import Address
 from pytoniq_core.boc.address import AddressError
-from tomlkit.toml_file import TOMLFile
 
-# Load configuration
-script_dir = os.path.dirname(os.path.abspath(__file__))
-config_file_path = os.path.join(script_dir, "config.toml")
+from ton_txns_data_conv.utils.config_loader import load_config
 
-if not os.path.exists(config_file_path):
-    print(f"Error: Configuration file not found at {config_file_path}.")
-    sys.exit(1)
-
-try:
-    toml_config = TOMLFile(config_file_path)
-    config = toml_config.read()
-except Exception as e:
-    print(f"Error: Failed to read configuration file. {str(e)}")
-    sys.exit(1)
+config = load_config()
 
 # TON Address Info
 DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")

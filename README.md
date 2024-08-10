@@ -77,7 +77,7 @@ This file contains settings for your `TON API key`[^1], TON address, and file sa
 Use `TON Index(API V3)` to retrieve transaction data associated with an address (`user_friendly_address`) for a specified period (`transaction_history_period`: default 365 days).
 
 ```bash
-python get_ton_txns_api.py
+python ton_txns_data_conv/account/get_ton_txns_api.py
 ```
 
 ### Creating custom files for cryptact
@@ -90,7 +90,7 @@ python get_ton_txns_api.py
 > - In the TON blockchain, there are no specific key/value pairs to distinguish between staking rewards and other transactions. Therefore, the CSV file may include transactions from other wallets that are not related to staking. Please manually remove any non-staking related data from the CSV file.  
 
 ```bash
-python create_ton_stkrwd_cryptact_custom.py
+python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 ```
 
 ### Visualize TON Whales Staking Amount History
@@ -101,7 +101,7 @@ Use [ton_whales_staking_dashboard.py](./ton_txns_data_conv/ton_whales_staking_da
 *Screenshot of the TON Whales Staking Amount History Dashboard*
 
 ```bash
-python ton_whales_staking_dashboard.py
+python ton_txns_data_conv/staking/ton_whales_staking_dashboard.py
 ```
 
 This script creates a Dash web application that allows you to:
@@ -126,7 +126,7 @@ This script creates a Dash web application that allows you to:
 Get the total amount of Toncoin held by the account and the rate price to calculate the total amount.
 
 ```bash
-python get_latest_ton_amount_calculation_asyncio.py
+python ton_txns_data_conv/account/get_latest_ton_amount_calculation.py
 ```
 
 - Use `TON API:(/v2/accounts/{account_id})` to get the Toncoin (`balance`) held by the account.
