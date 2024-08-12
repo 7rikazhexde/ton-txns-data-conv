@@ -1,7 +1,7 @@
 import datetime
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -160,35 +160,6 @@ def create_cryptact_custom_csv(
 
     df.to_csv(csv_file_path, index=False)
     print(f"CSV file saved: {csv_file_path}")
-
-
-class TonInfo(TypedDict):
-    user_friendly_address: str
-    raw_address: str
-    pool_address: str
-    get_member_use_address: str
-    transaction_history_period: float
-
-
-class StakingInfo(TypedDict):
-    calc_adjust_val: float
-    calc_hour_val: int
-
-
-class TonApiInfo(TypedDict):
-    api_key: str
-
-
-class FileSaveOption(TypedDict):
-    save_allow_json: bool
-    save_allow_csv: bool
-
-
-class Config(TypedDict):
-    ton_info: TonInfo
-    staking_info: StakingInfo
-    ton_api_info: TonApiInfo
-    file_save_option: FileSaveOption
 
 
 if __name__ == "__main__":

@@ -17,7 +17,6 @@ from aiohttp import (
 )
 from babel.numbers import get_currency_symbol
 from pytoniq_core import Address
-from pytoniq_core.boc.address import AddressError
 
 from ton_txns_data_conv.utils.config_loader import load_config
 
@@ -25,21 +24,10 @@ config = load_config()
 
 DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
 
-if not DEFAULT_UF_ADDRESS:
-    print("Error: Please set 'user_friendly_address' in the config.toml file.")
-    sys.exit(1)
-
-try:
-    address = Address(DEFAULT_UF_ADDRESS)
-    BASIC_WORKCHAIN_ADDRESS = address.to_str(
-        is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-    )
-except AddressError as e:
-    print(f"Error: Invalid user_friendly_address. {str(e)}")
-    sys.exit(1)
-except Exception as e:
-    print(f"Error: An unexpected error occurred while creating the address. {str(e)}")
-    sys.exit(1)
+address = Address(DEFAULT_UF_ADDRESS)
+BASIC_WORKCHAIN_ADDRESS = address.to_str(
+    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
+)
 
 BASIC_WORKCHAIN_ADDRESS = address.to_str(
     is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
@@ -204,5 +192,5 @@ async def main() -> None:
             print(f"An unexpected error occurred: {e}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     asyncio.run(main())

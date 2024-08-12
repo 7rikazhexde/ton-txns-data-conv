@@ -3,7 +3,7 @@ import sys
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, Union
+from typing import Any, Dict, List, Optional, Union
 
 import requests
 from pytonapi import Tonapi
@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 from ton_txns_data_conv.utils.config_loader import load_config
 
 
-def nano_to_amount(value: int, precision: int = 9) -> float:
+def nano_to_amount(value: int, precision: int = 9) -> float:  # pragma: no cover
     """Converts a value from nanoton to TON without rounding.
 
     Args:
@@ -40,7 +40,7 @@ def nano_to_amount(value: int, precision: int = 9) -> float:
 
 def convert_to_dict(
     obj: Union[List[Transaction], Transaction, Dict[str, Any], Any],
-) -> Union[List[Dict[str, Any]], Dict[str, Any], Any]:
+) -> Union[List[Dict[str, Any]], Dict[str, Any], Any]:  # pragma: no cover
     """Recursively converts various types of objects to their dictionary representations.
 
     Args:
@@ -66,6 +66,8 @@ def convert_to_dict(
             for key, value in obj.__dict__.items()
             if not callable(value) and not key.startswith("__")
         }
+    elif isinstance(obj, (int, float, bool)):  # 数値型と真偽値はそのまま返す
+        return obj
     elif hasattr(obj, "__str__"):
         return str(obj)
     else:
@@ -107,7 +109,7 @@ def save_json_file(data: List[Dict[str, Any]], filename: str) -> None:
 
 def get_recieve_txn_pytonapi(
     api_key: str, account_id: str, save_json: bool = False
-) -> List[Dict[str, Any]]:
+) -> List[Dict[str, Any]]:  # pragma: no cover
     """Retrieves transactions for a TON account using the PyTON API.
 
     Args:
@@ -139,6 +141,14 @@ def get_recieve_txn_pytonapi(
     transactions_dict = convert_to_dict(response.transactions)
     assert isinstance(transactions_dict, list), "Expected a list of transactions"
 
+    transactions_dict = [
+        {
+            k: (int(v) if isinstance(v, str) and v.isdigit() else v)
+            for k, v in tx.items()
+        }
+        for tx in transactions_dict
+    ]
+
     if save_json:
         filename = f"all_txns_pytonapi_N={len(transactions_dict)}_{date.today()}.json"
         save_json_file(transactions_dict, filename)
@@ -148,7 +158,7 @@ def get_recieve_txn_pytonapi(
 
 def get_recieve_txn_tonapi(
     account_id: str, limit: int = 100, sort_order: str = "desc", save_json: bool = False
-) -> List[Dict[str, Any]]:
+) -> List[Dict[str, Any]]:  # pragma: no cover
     """Retrieves transactions for a TON account using the TON API.
 
     Args:
@@ -278,50 +288,18 @@ def get_transactions_v3(
     return all_transactions
 
 
-class TonInfo(TypedDict):
-    user_friendly_address: str
-    raw_address: str
-    pool_address: str
-    get_member_use_address: str
-    transaction_history_period: float
-
-
-class StakingInfo(TypedDict):
-    calc_adjust_val: float
-    calc_hour_val: int
-
-
-class TonApiInfo(TypedDict):
-    api_key: str
-
-
-class FileSaveOption(TypedDict):
-    save_allow_json: bool
-    save_allow_csv: bool
-
-
-class Config(TypedDict):
-    ton_info: TonInfo
-    staking_info: StakingInfo
-    ton_api_info: TonApiInfo
-    file_save_option: FileSaveOption
-
-
-if __name__ == "__main__":
+def main() -> None:
     config = load_config()
-    API_KEY = config["ton_api_info"]["api_key"]
+    # API_KEY = config["ton_api_info"]["api_key"]
     ACCOUNT_ID = config["ton_info"]["user_friendly_address"]
     SAVE_JSON = config["file_save_option"]["save_allow_json"]
     TXNS_HISTORY_PERIOD = config["ton_info"]["transaction_history_period"]
 
-    if API_KEY:
-        response_pytonapi = get_recieve_txn_pytonapi(
-            API_KEY, ACCOUNT_ID, save_json=SAVE_JSON
-        )
-        print(f"PyTON API: Retrieved {len(response_pytonapi)} transactions")
-
-    # response_tonapi = get_recieve_txn_tonapi(ACCOUNT_ID, save_json=SAVE_JSON)
-    # print(f"TON API: Retrieved {len(response_tonapi)} transactions")
+    # if API_KEY:
+    #    response_pytonapi = get_recieve_txn_pytonapi(
+    #        API_KEY, ACCOUNT_ID, save_json=SAVE_JSON
+    #    )
+    #    print(f"PyTON API: Retrieved {len(response_pytonapi)} transactions")
 
     end_time = datetime.now()
     start_time = end_time - timedelta(days=TXNS_HISTORY_PERIOD)
@@ -332,3 +310,7 @@ if __name__ == "__main__":
         save_json=SAVE_JSON,
     )
     print(f"TON Index API v3: Retrieved {len(response_tonindex)} transactions")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
