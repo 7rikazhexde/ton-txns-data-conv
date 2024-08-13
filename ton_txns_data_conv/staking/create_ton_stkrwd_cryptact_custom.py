@@ -1,7 +1,7 @@
 import datetime
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
@@ -9,7 +9,6 @@ project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 from ton_txns_data_conv.account.get_ton_txns_api import (
-    get_recieve_txn_pytonapi,
     get_transactions_v3,
     nano_to_amount,
 )
@@ -18,36 +17,7 @@ from ton_txns_data_conv.utils.config_loader import load_config
 
 def create_cryptact_custom_data(
     transaction: Dict[str, Any], is_v3: bool = False
-) -> Optional[List[Any]]:
-    """Creates a list of data for a single transaction in Cryptact custom format.
-
-    Args:
-        transaction (Dict[str, Any]): A dictionary containing transaction data.
-        is_v3 (bool, optional): Whether the transaction is from the v3 API. Defaults to False.
-
-    Returns:
-        Optional[List[Any]]: A list of transaction data in Cryptact custom format if the transaction
-                             has a non-zero value, otherwise None.
-
-    Note:
-        - The function processes transaction data to create a row for the Cryptact custom CSV file.
-        - Only transactions with a value greater than 0 in the `in_msg` field are processed.
-        - The timestamp is converted to local time in the format "YYYY/MM/DD HH:MM:SS".
-        - The transaction value is converted from nanotons to TON with 9 decimal places.
-        - The "Action" field is set to "STAKING" for all transactions.
-        - The "Source" field is set to "TON_WALLET" for all transactions.
-        - The "Counter" currency is set to "JPY". This should be changed to the appropriate local currency if needed.
-        - The transaction hash is included in the "Comment" field for reference.
-
-    Example:
-        >>> transaction = {
-        ...     "hash": "abcdef1234567890",
-        ...     "utime": 1625097600,
-        ...     "in_msg": {"value": "1000000000"}
-        ... }
-        >>> create_cryptact_custom_data(transaction)
-        ['2021/07/01 00:00:00', 'STAKING', 'TON_WALLET', 'TON', '1.000000000', '', 'JPY', 0, 'TON', 'TON_TXN_HASH: abcdef1234567890']
-    """
+) -> Optional[List[Union[str, int, float]]]:
     if is_v3:
         in_msg = transaction.get("in_msg", {})
         txn_val = in_msg.get("value")
@@ -70,7 +40,7 @@ def create_cryptact_custom_data(
             "TON",
             value_ton,
             "",
-            "JPY",  # Please change here to local currency.
+            "JPY",
             0,
             "TON",
             f"TON_TXN_HASH: {txn_hash}",
@@ -84,43 +54,15 @@ def create_cryptact_custom_csv(
     filename: str = "",
     is_v3: bool = False,
 ) -> None:
-    """Creates a custom CSV file for Cryptact based on the transaction data.
-
-    Args:
-        response (List[Dict[str, Any]]): The transaction data as a list of dictionaries.
-        ascending (bool, optional): Whether to sort the data in ascending order. Defaults to True.
-        filename (str, optional): The filename to use for the CSV file. Defaults to an empty string.
-        is_v3 (bool, optional): Whether the transactions are from the v3 API. Defaults to False.
-
-    Returns:
-        None
-
-    Note:
-        - The CSV file is created in the custom file format for staking rewards in Cryptact.
-          Refer to https://support.cryptact.com/hc/en-us/articles/360002571312-Custom-File-for-any-other-trades#menu210
-          for more information on the custom file format.
-        - Only transactions with a value greater than 0 in the `in_msg` field are included in the CSV file.
-        - In the TON blockchain, there are no specific key/value pairs to distinguish between staking rewards and other transactions.
-          Therefore, the CSV file may include transactions from other wallets that are not related to staking.
-          Please manually remove any non-staking related data from the CSV file.
-        - The CSV file is saved in the 'output' directory, which is created if it doesn't exist.
-        - The filename includes the number of transactions and the current date.
-        - If a file with the same name already exists, the user is prompted to confirm overwriting.
-        - The CSV columns are: Timestamp, Action, Source, Base, Volume, Price, Counter, Fee, FeeCcy, Comment.
-
-    Example:
-        >>> transactions = [
-        ...     {"hash": "abc123", "utime": 1625097600, "in_msg": {"value": "1000000000"}},
-        ...     {"hash": "def456", "utime": 1625184000, "in_msg": {"value": "2000000000"}}
-        ... ]
-        >>> create_cryptact_custom_csv(transactions, filename="example")
-        CSV file saved: /path/to/output/transactions_example_N=2_2023-07-15.csv
-    """
-    cryptact_custom_data = [
+    cryptact_custom_data: List[List[Union[str, int, float]]] = [
         data
         for transaction in response
         if (data := create_cryptact_custom_data(transaction, is_v3)) is not None
     ]
+
+    if not cryptact_custom_data:
+        print("No valid transactions found. CSV file not created.")
+        return
 
     df = pd.DataFrame(
         cryptact_custom_data,
@@ -162,25 +104,12 @@ def create_cryptact_custom_csv(
     print(f"CSV file saved: {csv_file_path}")
 
 
-if __name__ == "__main__":
+def main() -> None:
     config = load_config()
-    API_KEY = config["ton_api_info"]["api_key"]
-    ACCOUNT_ID = config["ton_info"]["user_friendly_address"]
-    SAVE_JSON = config["file_save_option"]["save_allow_json"]
-    SAVE_CSV = config["file_save_option"]["save_allow_csv"]
-    TXNS_HISTORY_PERIOD = config["ton_info"]["transaction_history_period"]
-
-    if API_KEY and SAVE_CSV:
-        response_pytonapi = get_recieve_txn_pytonapi(
-            API_KEY, ACCOUNT_ID, save_json=SAVE_JSON
-        )
-        create_cryptact_custom_csv(response_pytonapi, filename="pytonapi")
-        print(f"PyTON API: Processed {len(response_pytonapi)} transactions")
-
-    # if SAVE_CSV:
-    #    response_nonapi = get_recieve_txn_tonapi(ACCOUNT_ID, save_json=SAVE_JSON)
-    #    create_cryptact_custom_csv(response_nonapi, filename="tonapi")
-    #    print(f"TON API: Processed {len(response_nonapi)} transactions")
+    ACCOUNT_ID: str = config["ton_info"]["user_friendly_address"]
+    SAVE_JSON: bool = config["file_save_option"]["save_allow_json"]
+    SAVE_CSV: bool = config["file_save_option"]["save_allow_csv"]
+    TXNS_HISTORY_PERIOD: int = config["ton_info"]["transaction_history_period"]
 
     if SAVE_CSV:
         end_time = datetime.datetime.now()
@@ -193,3 +122,7 @@ if __name__ == "__main__":
         )
         create_cryptact_custom_csv(response_v3, filename="tonindex_v3", is_v3=True)
         print(f"TON Index API v3: Processed {len(response_v3)} transactions")
+
+
+if __name__ == "__main__":
+    main()

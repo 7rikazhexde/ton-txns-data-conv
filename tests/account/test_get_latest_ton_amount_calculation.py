@@ -46,28 +46,28 @@ async def test_fetch_data_success(mocker: MockerFixture) -> None:
     mock_response.raise_for_status.assert_called_once()
 
 
-# @pytest.mark.asyncio
-# async def test_fetch_data_http_error(mocker: MockerFixture) -> None:
-#    """
-#    fetch_data 関数が HTTP エラーを適切に処理することをテストする
-#
-#    :param mocker: pytestのモッカー
-#    """
-#    # HTTPエラーを発生させるモックを設定
-#    mock_response = mocker.Mock(spec=httpx.Response)
-#    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-#        "HTTP Error", request=mocker.Mock(), response=mocker.Mock()
-#    )
-#
-#    mock_client = mocker.AsyncMock(spec=httpx.AsyncClient)
-#    mock_client.get.return_value = mock_response
-#
-#    # エラーが発生することを確認
-#    with pytest.raises(httpx.HTTPStatusError):
-#        await glta.fetch_data(mock_client, "https://example.com")
-#
-#    mock_client.get.assert_called_once_with("https://example.com")
-#    mock_response.raise_for_status.assert_called_once()
+@pytest.mark.asyncio
+async def test_fetch_data_http_error(mocker: MockerFixture) -> None:
+    """
+    fetch_data 関数が HTTP エラーを適切に処理することをテストする
+
+    :param mocker: pytestのモッカー
+    """
+    # HTTPエラーを発生させるモックを設定
+    mock_response = mocker.Mock(spec=httpx.Response)
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "HTTP Error", request=mocker.Mock(), response=mocker.Mock()
+    )
+
+    mock_client = mocker.AsyncMock(spec=httpx.AsyncClient)
+    mock_client.get.return_value = mock_response
+
+    # エラーが発生することを確認
+    with pytest.raises(httpx.HTTPStatusError):
+        await glta.fetch_data(mock_client, "https://example.com")
+
+    mock_client.get.assert_called_once_with("https://example.com")
+    mock_response.raise_for_status.assert_called_once()
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,10 @@
 import asyncio
+import gzip
+import json
 import sys
 from pathlib import Path
+
+from aiohttp import ClientResponseError, ClientSession
 
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
@@ -60,10 +64,45 @@ BASE_URL_TONHUB = "https://mainnet-v4.tonhubapi.com"
 BASE_URL_TONAPI = "https://tonapi.io/v2"
 
 
-async def fetch_data(session: aiohttp.ClientSession, url: str) -> Dict[str, Any]:
+async def fetch_data(session: ClientSession, url: str) -> Dict[str, Any]:
+    print(f"Fetching data from: {url}")
     async with session.get(url) as response:
-        response.raise_for_status()
-        return cast(Dict[str, Any], await response.json())
+        print(f"Response status: {response.status}")
+        print(f"Response headers: {response.headers}")
+
+        if response.status >= 400:
+            raise ClientResponseError(
+                request_info=response.request_info,
+                history=response.history,
+                status=response.status,
+                message=f"HTTP Error {response.status}: {response.reason}",
+            )
+
+        content = await response.read()
+        print(f"Raw content length: {len(content)} bytes")
+
+        if response.headers.get("Content-Encoding") == "gzip":
+            print("Content-Encoding is gzip, attempting to decompress")
+            try:
+                decompressed_content = gzip.decompress(content)
+                print("Successfully decompressed gzip content")
+                data_str = decompressed_content.decode("utf-8")
+            except gzip.BadGzipFile:
+                print("Failed to decompress as gzip, treating as uncompressed")
+                data_str = content.decode("utf-8")
+        else:
+            print("Content is not gzip encoded")
+            data_str = content.decode("utf-8")
+
+        print(f"Data string preview: {data_str[:200]}...")  # 最初の200文字を表示
+
+        data = json.loads(data_str)
+
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected a JSON object, got {type(data).__name__}")
+
+        print(f"Parsed data: {data}")
+        return data
 
 
 async def get_latest_block(
@@ -141,6 +180,7 @@ async def main() -> None:
     client_kwargs = {
         "connector": connector,
         "timeout": timeout,
+        "auto_decompress": True,
     }
     if trace_config:
         client_kwargs["trace_configs"] = [trace_config]

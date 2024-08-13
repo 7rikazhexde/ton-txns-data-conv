@@ -127,7 +127,7 @@ def get_ton_balance(session: requests.Session, user_friendly_address: str) -> fl
     return float(data["balance"]) / 1e9
 
 
-if __name__ == "__main__":
+def main() -> None:
     session = create_session()
     try:
         seqno, ts_utc, ts_local = get_latest_block(session)
@@ -158,3 +158,7 @@ if __name__ == "__main__":
         print(f"An error occurred: {e}")
     finally:
         session.close()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
