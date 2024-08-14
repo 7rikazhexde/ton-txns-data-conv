@@ -1,3 +1,4 @@
+import platform
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -433,7 +434,10 @@ async def test_main_success(
     assert "Balance: 50.000000000" in captured.out
     assert "Hold TON: 150.000000000" in captured.out
     assert "Rate: 2.00" in captured.out
-    assert "My account hold TON price: ¥300.00" in captured.out
+    if platform.system() == "Darwin":
+        assert "My account hold TON price: ￥300.00" in captured.out
+    else:
+        assert "My account hold TON price: ¥300.00" in captured.out
 
 
 @pytest.mark.asyncio
@@ -481,8 +485,10 @@ async def test_main_no_staking_info(
     mocker.patch.object(glta, "DEFAULT_GET_MEMBER_USER_ADDRESS", "mock_member_address")
     mocker.patch.object(glta, "DEFAULT_UF_ADDRESS", "mock_uf_address")
     mocker.patch.object(glta, "DEFAULT_COUNTER_VAL", "JPY")
-    mocker.patch.object(glta, "symbol", "¥")
-
+    if platform.system() == "Darwin":
+        mocker.patch.object(glta, "symbol", "￥")
+    else:
+        mocker.patch.object(glta, "symbol", "¥")
     # main関数の実行
     await glta.main()
 

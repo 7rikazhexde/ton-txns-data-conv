@@ -39,7 +39,7 @@ def mock_project_structure(tmp_path: Path) -> Path:
     staking_calculation_adjustment_value = 5
     local_timezone = 9
     """
-    (config_dir / "config_ps.toml").write_text(config_content)
+    (config_dir / "config.toml").write_text(config_content)
     return project_root
 
 
@@ -70,7 +70,7 @@ def test_find_config_file_success(mock_config_loader: Path) -> None:
     When: find_config_file関数を呼び出す
     Then: 正しい設定ファイルのパスが返される
     """
-    expected_path = mock_config_loader / "ton_txns_data_conv" / "config_ps.toml"
+    expected_path = mock_config_loader / "ton_txns_data_conv" / "config.toml"
     assert find_config_file() == expected_path
 
 

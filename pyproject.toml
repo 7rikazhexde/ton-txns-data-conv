@@ -101,6 +101,7 @@ warn_redundant_casts = true
 
 [tool.pytest.ini_options]
 testpaths = ["ton_txns_data_conv","tests"]
+pythonpath = ["."]
 
 [tool.coverage.run]
 branch = false

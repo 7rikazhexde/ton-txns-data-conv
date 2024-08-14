@@ -1,3 +1,4 @@
+import platform
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -265,7 +266,10 @@ def test_main_success(
     assert "Balance: 10.000000000" in captured.out
     assert "Hold TON: 30.000000000" in captured.out
     assert "Rate: 200.00" in captured.out
-    assert "My account hold TON price: ¥6000.00" in captured.out
+    if platform.system() == "Darwin":
+        assert "My account hold TON price: ￥6000.00" in captured.out
+    else:
+        assert "My account hold TON price: ¥6000.00" in captured.out
 
 
 def test_main_no_staking_info(
