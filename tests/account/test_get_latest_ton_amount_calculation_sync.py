@@ -52,6 +52,44 @@ def mock_load_config(mocker: MockerFixture, mock_config: Dict[str, Any]) -> None
     mocker.patch.object(gltacs, "load_config", return_value=mock_config)
 
 
+def test_initialize_address_success(
+    mock_config: Dict[str, Any], mocker: MockerFixture
+) -> None:
+    """
+    Test initialize_address function for successful execution.
+
+    :param mock_config: mock configuration dictionary
+    :param mocker: pytest mocker fixture
+    """
+    mocker.patch.object(gltacs, "config", mock_config)
+    mocker.patch.object(gltacs, "Address")  # モックAddressオブジェクトを作成
+
+    gltacs.initialize_address()
+
+    assert gltacs.DEFAULT_UF_ADDRESS == mock_config["ton_info"]["user_friendly_address"]
+    gltacs.Address.assert_called_once_with(
+        mock_config["ton_info"]["user_friendly_address"]
+    )
+
+
+def test_initialize_address_failure(
+    mocker: MockerFixture, mock_config: Dict[str, Any]
+) -> None:
+    """
+    Test initialize_address function for failure case.
+
+    :param mocker: pytest mocker fixture
+    :param mock_config: mock configuration dictionary
+    """
+    invalid_config = mock_config.copy()
+    invalid_config["ton_info"]["user_friendly_address"] = ""
+    mocker.patch.object(gltacs, "config", invalid_config)
+
+    with pytest.raises(SystemExit) as excinfo:
+        gltacs.initialize_address()
+    assert excinfo.value.code == 1
+
+
 def test_create_session() -> None:
     """Test the create_session function."""
     session = gltacs.create_session()
@@ -234,6 +272,7 @@ def test_main_success(
     :param mock_session: mocked session object
     :param capsys: pytest fixture to capture stdout and stderr
     """
+    mocker.patch.object(gltacs, "initialize_address")
     mocker.patch.object(gltacs, "create_session", return_value=mock_session)
     mocker.patch.object(
         gltacs,
@@ -282,6 +321,7 @@ def test_main_no_staking_info(
     :param mock_session: mocked session object
     :param capsys: pytest fixture to capture stdout and stderr
     """
+    mocker.patch.object(gltacs, "initialize_address")
     mocker.patch.object(gltacs, "create_session", return_value=mock_session)
     mocker.patch.object(
         gltacs,
@@ -316,6 +356,7 @@ def test_main_exception(
     :param exception: exception to be raised
     :param capsys: pytest fixture to capture stdout and stderr
     """
+    mocker.patch.object(gltacs, "initialize_address")
     mocker.patch.object(gltacs, "create_session", return_value=mock_session)
     mocker.patch.object(gltacs, "get_latest_block", side_effect=exception)
 
@@ -323,3 +364,98 @@ def test_main_exception(
 
     captured = capsys.readouterr()
     assert "An error occurred: Test error" in captured.out
+
+
+def test_log_request(capsys: pytest.CaptureFixture[str], mocker: MockerFixture) -> None:
+    """
+    Test the log_request function.
+
+    :param capsys: pytest fixture to capture stdout and stderr
+    :param mocker: pytest mocker fixture
+    """
+    mocker.patch.object(gltacs, "ENABLE_TRACING", True)
+    gltacs.log_request("GET", "https://example.com")
+    captured = capsys.readouterr()
+    assert "Sending request: GET https://example.com" in captured.out
+
+    mocker.patch.object(gltacs, "ENABLE_TRACING", False)
+    gltacs.log_request("GET", "https://example.com")
+    captured = capsys.readouterr()
+    assert captured.out == ""
+
+
+def test_log_response(
+    capsys: pytest.CaptureFixture[str], mocker: MockerFixture
+) -> None:
+    """
+    Test the log_response function.
+
+    :param capsys: pytest fixture to capture stdout and stderr
+    :param mocker: pytest mocker fixture
+    """
+    mocker.patch.object(gltacs, "ENABLE_TRACING", True)
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.url = "https://example.com"
+    gltacs.log_response(mock_response)
+    captured = capsys.readouterr()
+    assert "Received response: 200 from https://example.com" in captured.out
+
+    mocker.patch.object(gltacs, "ENABLE_TRACING", False)
+    gltacs.log_response(mock_response)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+
+
+def test_make_request_raise_for_status(
+    mocker: MockerFixture, mock_session: Any
+) -> None:
+    """
+    Test the make_request function when raise_for_status is called.
+
+    :param mocker: pytest mocker fixture
+    :param mock_session: mocked session object
+    """
+    mock_response = mocker.Mock()
+    mock_response.raise_for_status.side_effect = RequestException("Test error")
+    mock_session.request.return_value = mock_response
+
+    with pytest.raises(RequestException, match="Test error"):
+        gltacs.make_request(mock_session, "GET", "https://example.com")
+
+
+def test_ton_rate_by_ticker_custom_ticker(
+    mocker: MockerFixture, mock_session: Any
+) -> None:
+    """
+    Test the ton_rate_by_ticker function with a custom ticker.
+
+    :param mocker: pytest mocker fixture
+    :param mock_session: mocked session object
+    """
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"rates": {"TON": {"prices": {"USD": "1.5"}}}}
+    mocker.patch.object(gltacs, "make_request", return_value=mock_response)
+
+    rate = gltacs.ton_rate_by_ticker(mock_session, "usd")
+
+    assert rate == 1.5
+
+
+def test_main_initialize_address_failure(
+    mocker: MockerFixture, mock_session: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """
+    Test the main function when initialize_address fails.
+
+    :param mocker: pytest mocker fixture
+    :param mock_session: mocked session object
+    :param capsys: pytest fixture to capture stdout and stderr
+    """
+    mocker.patch.object(gltacs, "initialize_address", side_effect=SystemExit(1))
+    mocker.patch.object(gltacs, "create_session", return_value=mock_session)
+
+    with pytest.raises(SystemExit) as excinfo:
+        gltacs.main()
+
+    assert excinfo.value.code == 1

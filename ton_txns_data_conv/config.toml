@@ -85,4 +85,4 @@ save_allow_stkrwd = true
 counter = "JPY"
 
 [debug_info]
-enable_tracing = true
+enable_tracing = false

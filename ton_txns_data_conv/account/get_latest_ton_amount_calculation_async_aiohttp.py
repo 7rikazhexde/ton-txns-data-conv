@@ -21,22 +21,34 @@ from aiohttp import (
 )
 from babel.numbers import get_currency_symbol
 from pytoniq_core import Address
+from pytoniq_core.boc.address import AddressError
 
 from ton_txns_data_conv.utils.config_loader import load_config
 
 config = load_config()
 
-DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
+DEFAULT_UF_ADDRESS: str = ""
+BASIC_WORKCHAIN_ADDRESS: str = ""
 
-address = Address(DEFAULT_UF_ADDRESS)
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
 
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
-# Ref: https://docs.ton.org/develop/dapps/cookbook#what-flags-are-there-in-user-friendly-addresses
+def initialize_address() -> None:
+    global BASIC_WORKCHAIN_ADDRESS
+    global DEFAULT_UF_ADDRESS
+    DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
+    try:
+        address = Address(DEFAULT_UF_ADDRESS)
+        BASIC_WORKCHAIN_ADDRESS = address.to_str(
+            is_user_friendly=True,
+            is_bounceable=True,
+            is_url_safe=True,
+            is_test_only=False,
+        )
+    except (IndexError, AddressError) as e:
+        print(
+            f"Warning: Invalid address format ({type(e).__name__}). Using empty address."
+        )
+        sys.exit(1)
+
 
 DEFAULT_POOL_ADDRESS = config.get("ton_info", {}).get("pool_address", "")
 DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
@@ -65,10 +77,10 @@ BASE_URL_TONAPI = "https://tonapi.io/v2"
 
 
 async def fetch_data(session: ClientSession, url: str) -> Dict[str, Any]:
-    print(f"Fetching data from: {url}")
+    # print(f"Fetching data from: {url}")
     async with session.get(url) as response:
-        print(f"Response status: {response.status}")
-        print(f"Response headers: {response.headers}")
+        # print(f"Response status: {response.status}")
+        # print(f"Response headers: {response.headers}")
 
         if response.status >= 400:
             raise ClientResponseError(
@@ -79,29 +91,29 @@ async def fetch_data(session: ClientSession, url: str) -> Dict[str, Any]:
             )
 
         content = await response.read()
-        print(f"Raw content length: {len(content)} bytes")
+        # print(f"Raw content length: {len(content)} bytes")
 
         if response.headers.get("Content-Encoding") == "gzip":
-            print("Content-Encoding is gzip, attempting to decompress")
+            # print("Content-Encoding is gzip, attempting to decompress")
             try:
                 decompressed_content = gzip.decompress(content)
-                print("Successfully decompressed gzip content")
+                # print("Successfully decompressed gzip content")
                 data_str = decompressed_content.decode("utf-8")
             except gzip.BadGzipFile:
-                print("Failed to decompress as gzip, treating as uncompressed")
+                # print("Failed to decompress as gzip, treating as uncompressed")
                 data_str = content.decode("utf-8")
         else:
-            print("Content is not gzip encoded")
+            # print("Content is not gzip encoded")
             data_str = content.decode("utf-8")
 
-        print(f"Data string preview: {data_str[:200]}...")  # 最初の200文字を表示
+        # print(f"Data string preview: {data_str[:200]}...")  # 最初の200文字を表示
 
         data = json.loads(data_str)
 
         if not isinstance(data, dict):
             raise ValueError(f"Expected a JSON object, got {type(data).__name__}")
 
-        print(f"Parsed data: {data}")
+        # print(f"Parsed data: {data}")
         return data
 
 
@@ -172,6 +184,7 @@ async def on_request_end(
 
 
 async def main() -> None:
+    initialize_address()
     trace_config = create_trace_config(ENABLE_TRACING)
 
     connector = TCPConnector(limit=10, force_close=True, enable_cleanup_closed=True)

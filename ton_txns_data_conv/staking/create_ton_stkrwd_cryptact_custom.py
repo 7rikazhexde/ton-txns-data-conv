@@ -16,15 +16,11 @@ from ton_txns_data_conv.utils.config_loader import load_config
 
 
 def create_cryptact_custom_data(
-    transaction: Dict[str, Any], is_v3: bool = False
+    transaction: Dict[str, Any],
 ) -> Optional[List[Union[str, int, float]]]:
-    if is_v3:
-        in_msg = transaction.get("in_msg", {})
-        txn_val = in_msg.get("value")
-        timestamp_field = "now"
-    else:
-        txn_val = transaction["in_msg"]["value"]
-        timestamp_field = "utime"
+    in_msg = transaction.get("in_msg", {})
+    txn_val = in_msg.get("value")
+    timestamp_field = "now"
 
     if txn_val and int(txn_val) != 0:
         txn_hash = transaction["hash"]
@@ -51,13 +47,12 @@ def create_cryptact_custom_data(
 def create_cryptact_custom_csv(
     response: List[Dict[str, Any]],
     ascending: bool = True,
-    filename: str = "",
-    is_v3: bool = False,
+    filename: str = "tonindex_v3",
 ) -> None:
     cryptact_custom_data: List[List[Union[str, int, float]]] = [
         data
         for transaction in response
-        if (data := create_cryptact_custom_data(transaction, is_v3)) is not None
+        if (data := create_cryptact_custom_data(transaction)) is not None
     ]
 
     if not cryptact_custom_data:
@@ -120,9 +115,9 @@ def main() -> None:
             end_time=end_time,
             save_json=SAVE_JSON,
         )
-        create_cryptact_custom_csv(response_v3, filename="tonindex_v3", is_v3=True)
+        create_cryptact_custom_csv(response_v3)
         print(f"TON Index API v3: Processed {len(response_v3)} transactions")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

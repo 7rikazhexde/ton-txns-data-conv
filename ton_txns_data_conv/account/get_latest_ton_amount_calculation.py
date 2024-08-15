@@ -11,22 +11,34 @@ from typing import Any, Coroutine, Dict, List, Optional, Tuple, cast
 import httpx
 from babel.numbers import get_currency_symbol
 from pytoniq_core import Address
+from pytoniq_core.boc.address import AddressError
 
 from ton_txns_data_conv.utils.config_loader import load_config
 
 config = load_config()
 
+DEFAULT_UF_ADDRESS: str = ""
+BASIC_WORKCHAIN_ADDRESS: str = ""
 
-DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
 
-address = Address(DEFAULT_UF_ADDRESS)
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
+def initialize_address() -> None:
+    global BASIC_WORKCHAIN_ADDRESS
+    global DEFAULT_UF_ADDRESS
+    DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
+    try:
+        address = Address(DEFAULT_UF_ADDRESS)
+        BASIC_WORKCHAIN_ADDRESS = address.to_str(
+            is_user_friendly=True,
+            is_bounceable=True,
+            is_url_safe=True,
+            is_test_only=False,
+        )
+    except (IndexError, AddressError) as e:
+        print(
+            f"Warning: Invalid address format ({type(e).__name__}). Using empty address."
+        )
+        sys.exit(1)
 
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
 
 DEFAULT_POOL_ADDRESS = config.get("ton_info", {}).get("pool_address", "")
 DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
@@ -133,6 +145,7 @@ async def get_ton_balance(
 
 
 async def main() -> None:
+    initialize_address()
     timeout: httpx.Timeout = httpx.Timeout(10.0)
     limits: httpx.Limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
 

@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Tuple
 import requests
 from babel.numbers import get_currency_symbol
 from pytoniq_core import Address
+from pytoniq_core.boc.address import AddressError
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -18,17 +19,28 @@ from ton_txns_data_conv.utils.config_loader import load_config
 
 config = load_config()
 
-DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
+DEFAULT_UF_ADDRESS: str = ""
+BASIC_WORKCHAIN_ADDRESS: str = ""
 
-address = Address(DEFAULT_UF_ADDRESS)
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
 
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
-# Ref: https://docs.ton.org/develop/dapps/cookbook#what-flags-are-there-in-user-friendly-addresses
+def initialize_address() -> None:
+    global BASIC_WORKCHAIN_ADDRESS
+    global DEFAULT_UF_ADDRESS
+    DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
+    try:
+        address = Address(DEFAULT_UF_ADDRESS)
+        BASIC_WORKCHAIN_ADDRESS = address.to_str(
+            is_user_friendly=True,
+            is_bounceable=True,
+            is_url_safe=True,
+            is_test_only=False,
+        )
+    except (IndexError, AddressError) as e:
+        print(
+            f"Warning: Invalid address format ({type(e).__name__}). Using empty address."
+        )
+        sys.exit(1)
+
 
 DEFAULT_POOL_ADDRESS = config.get("ton_info", {}).get("pool_address", "")
 DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
@@ -128,6 +140,7 @@ def get_ton_balance(session: requests.Session, user_friendly_address: str) -> fl
 
 
 def main() -> None:
+    initialize_address()
     session = create_session()
     try:
         seqno, ts_utc, ts_local = get_latest_block(session)
