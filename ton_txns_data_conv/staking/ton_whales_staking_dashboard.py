@@ -13,7 +13,7 @@ import csv
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiohttp
 import dash
@@ -27,50 +27,70 @@ from pytoniq_core.boc.address import AddressError
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
-from ton_txns_data_conv.utils.config_loader import load_config
 
-# Load configuration
-config = load_config()
+def initialize_config() -> Dict[str, Any]:
+    from ton_txns_data_conv.utils.config_loader import load_config
 
-# TON Address Info
-DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
+    config = load_config()
 
-if not DEFAULT_UF_ADDRESS:
-    print("Error: Please set 'user_friendly_address' in the config.toml file.")
-    sys.exit(1)
+    def get_address(user_friendly_address: str) -> str:
+        if not user_friendly_address:
+            raise ValueError(
+                "Please set 'user_friendly_address' in the config.toml file."
+            )
 
+        try:
+            address = Address(user_friendly_address)
+            return cast(
+                str,
+                address.to_str(
+                    is_user_friendly=True,
+                    is_bounceable=True,
+                    is_url_safe=True,
+                    is_test_only=False,
+                ),
+            )
+        except AddressError as e:
+            raise ValueError(f"Invalid user_friendly_address: {str(e)}")
+        except Exception as e:
+            raise RuntimeError(
+                f"An unexpected error occurred while creating the address: {str(e)}"
+            )
+
+    try:
+        default_local_timezone = config.get("staking_info", {}).get(
+            "local_timezone", 0.1
+        )
+        return {
+            "BASIC_WORKCHAIN_ADDRESS": get_address(
+                config.get("ton_info", {}).get("user_friendly_address", "")
+            ),
+            "DEFAULT_POOL_ADDRESS": config.get("ton_info", {}).get("pool_address", ""),
+            "DEFAULT_GET_MEMBER_USER_ADDRESS": config.get("ton_info", {}).get(
+                "get_member_use_address", ""
+            ),
+            "DEFAULT_STAKING_CALC_ADJUST_VALUE": config.get("staking_info", {}).get(
+                "staking_calculation_adjustment_value", 0.1
+            ),
+            "DEFAULT_LOCAL_TIMEZONE": default_local_timezone,
+            "DEFAULT_COUNTER_VAL": config.get("cryptact_info", {}).get("counter", ""),
+            "TZ": timezone(timedelta(hours=default_local_timezone)),
+            "SAVE_ALLOW_STKRWD": config.get("file_save_option", {}).get(
+                "save_allow_stkrwd", False
+            ),
+        }
+    except (ValueError, RuntimeError) as e:
+        print(f"Error during initialization: {str(e)}")
+        sys.exit(1)
+
+
+# Initialisation
 try:
-    address = Address(DEFAULT_UF_ADDRESS)
-    BASIC_WORKCHAIN_ADDRESS = address.to_str(
-        is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-    )
-except AddressError as e:
-    print(f"Error: Invalid user_friendly_address. {str(e)}")
-    sys.exit(1)
+    config_values = initialize_config()
+    globals().update(config_values)
 except Exception as e:
-    print(f"Error: An unexpected error occurred while creating the address. {str(e)}")
+    print(f"Failed to initialize configuration: {str(e)}")
     sys.exit(1)
-
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
-# Ref: https://docs.ton.org/develop/dapps/cookbook#what-flags-are-there-in-user-friendly-addresses
-
-DEFAULT_POOL_ADDRESS = config.get("ton_info", {}).get("pool_address", "")
-DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
-    "get_member_use_address", ""
-)
-
-# Initialize default values
-DEFAULT_STAKING_CALC_ADJUST_VALUE = config.get("staking_info", {}).get(
-    "staking_calculation_adjustment_value", 0.1
-)
-DEFAULT_LOCAL_TIMEZONE = config.get("staking_info", {}).get("local_timezone", 0.1)
-DEFAULT_COUNTER_VAL = config.get("cryptact_info", {}).get("counter", "")
-TZ = timezone(timedelta(hours=DEFAULT_LOCAL_TIMEZONE))
-
-# Save Option
-SAVE_ALLOW_STKRWD = config.get("file_save_option", {}).get("save_allow_stkrwd", False)
 
 
 async def get_latest_block(session: aiohttp.ClientSession) -> Tuple[int, datetime]:
@@ -145,7 +165,7 @@ async def get_staking_info(
             return {
                 # UTC Time: 2024-07-15 08:00:00+00:00
                 # JST Time: 2024-07-15 17:00:00+09:00
-                "Timestamp": timestamp.astimezone(TZ),
+                "Timestamp": timestamp.astimezone(config_values["TZ"]),
                 "Seqno": seqno,
                 "Staked Amount": int(data["result"][0]["value"]) / 1e9,
                 "Pending Deposit": int(data["result"][1]["value"]) / 1e9,
@@ -247,7 +267,7 @@ def calculate_staking_rewards(df: pd.DataFrame, adjust_val: float) -> pd.DataFra
                     "Base": "TON",
                     "Volume": difference,
                     "Price": "",
-                    "Counter": DEFAULT_COUNTER_VAL,
+                    "Counter": config_values["DEFAULT_COUNTER_VAL"],
                     "Fee": 0,
                     "FeeCcy": "TON",
                     "Comment": f"Seqno Segment:{df.iloc[i-1]['Seqno']} - {df.iloc[i]['Seqno']}",
@@ -355,7 +375,7 @@ def create_layout() -> html.Div:
                     dcc.Input(
                         id="pool-address-input",
                         type="text",
-                        value=DEFAULT_POOL_ADDRESS,
+                        value=config_values["DEFAULT_POOL_ADDRESS"],
                         className="input full-width",
                     ),
                 ],
@@ -370,7 +390,7 @@ def create_layout() -> html.Div:
                             dcc.Input(
                                 id="get-member-user-address-input",
                                 type="text",
-                                value=DEFAULT_GET_MEMBER_USER_ADDRESS,
+                                value=config_values["DEFAULT_GET_MEMBER_USER_ADDRESS"],
                                 className="input full-width",
                             ),
                             html.Span(
@@ -437,7 +457,9 @@ def create_layout() -> html.Div:
                                     dcc.Input(
                                         id="adjust-val-input",
                                         type="number",
-                                        value=DEFAULT_STAKING_CALC_ADJUST_VALUE,
+                                        value=config_values[
+                                            "DEFAULT_STAKING_CALC_ADJUST_VALUE"
+                                        ],
                                         className="input small-input",
                                     ),
                                     html.Span(
@@ -479,7 +501,7 @@ def create_layout() -> html.Div:
                                 min=0,
                                 max=23,
                                 step=1,
-                                value=DEFAULT_LOCAL_TIMEZONE,
+                                value=config_values["DEFAULT_LOCAL_TIMEZONE"],
                                 className="input small-input",
                             ),
                         ],
@@ -490,8 +512,9 @@ def create_layout() -> html.Div:
                             html.Label("Date Range:", className="label"),
                             dcc.DatePickerRange(
                                 id="date-picker-range",
-                                start_date=datetime.now(TZ).date() - timedelta(days=30),
-                                end_date=datetime.now(TZ).date(),
+                                start_date=datetime.now(config_values["TZ"]).date()
+                                - timedelta(days=30),
+                                end_date=datetime.now(config_values["TZ"]).date(),
                                 display_format="YYYY-MM-DD",
                                 className="date-picker",
                             ),
@@ -605,8 +628,12 @@ def fetch_data(
         return dash.no_update, dash.no_update
 
     try:
-        start_datetime = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=TZ)
-        end_datetime = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=TZ)
+        start_datetime = datetime.strptime(start_date, "%Y-%m-%d").replace(
+            tzinfo=config_values["TZ"]
+        )
+        end_datetime = datetime.strptime(end_date, "%Y-%m-%d").replace(
+            tzinfo=config_values["TZ"]
+        )
         hour = int(hour)
         if hour < 0 or hour > 23:
             raise ValueError("Hour must be between 0 and 23")
@@ -639,7 +666,7 @@ def fetch_data(
 
         message = f"Data fetched successfully. {len(df)} records retrieved."
 
-        if SAVE_ALLOW_STKRWD:
+        if config_values["SAVE_ALLOW_STKRWD"]:
             try:
                 d_today = datetime.today().date()
                 num = len(df)
@@ -697,7 +724,7 @@ def open_staking_stats(n_clicks: Optional[int]) -> str:
         This address should be set elsewhere in the application.
     """
     if n_clicks is not None:
-        url = f"https://tonwhales.com/staking/address/{BASIC_WORKCHAIN_ADDRESS}"
+        url = f"https://tonwhales.com/staking/address/{config_values["BASIC_WORKCHAIN_ADDRESS"]}"
         return f"window.open('{url}', '_blank')"
     return "No action taken."
 
@@ -892,5 +919,5 @@ def handle_overwrite_confirmation(
     return f"Staking compensation history is saved in {csv_file_path}."
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app.run_server(debug=True)
