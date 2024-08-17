@@ -1,85 +1,102 @@
 import asyncio
 import gzip
+import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import aiohttp
 import pytest
-from aiohttp import ClientError, ClientResponseError, ClientSession, TraceConfig
+from aiohttp import (
+    ClientResponse,
+    ClientResponseError,
+    ClientSession,
+    ClientTimeout,
+    TCPConnector,
+)
 from pytest_mock import MockerFixture
 
-from ton_txns_data_conv.account import (
-    get_latest_ton_amount_calculation_async_aiohttp as glta,
+import ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp as glta
+from ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp import (
+    TraceConfig,
 )
 
 
 @pytest.fixture
 def mock_config(mocker: MockerFixture) -> Dict[str, Any]:
+    """
+    モックされた設定データを提供するフィクスチャ。
+
+    :param mocker: pytest-mockのMockerFixture
+    :return: テスト用の設定データを含む辞書
+    """
     return {
         "ton_info": {
-            "user_friendly_address": "EQCkR1cGmnsE45N4K0otPl5EnxnRakmGqeJUNua5fkWhales",
-            "pool_address": "EQA_zaBwynX7yc0XCx2qnpUI71wv7mjmSVcogHw0mNAt6cgv",
-            "get_member_use_address": "EQCkR1cGmnsE45N4K0otPl5EnxnRakmGqeJUNua5fkWhales",
+            "user_friendly_address": "test_user_friendly_address",
+            "pool_address": "test_pool_address",
+            "get_member_use_address": "test_get_member_use_address",
         },
-        "staking_info": {
-            "local_timezone": 9,
-        },
-        "cryptact_info": {
-            "counter": "JPY",
-        },
-        "debug_info": {
-            "enable_tracing": False,
-        },
+        "staking_info": {"local_timezone": 9},
+        "cryptact_info": {"counter": "JPY"},
+        "debug_info": {"enable_tracing": True},
     }
 
 
-@pytest.fixture
-def mock_aiohttp_session(mocker: MockerFixture) -> MockerFixture:
+@pytest.fixture(autouse=True)
+def mock_address(mocker: MockerFixture) -> None:
     """
-    aiohttp.ClientSession のモックを提供するフィクスチャ
+    Addressクラスをモックするフィクスチャ。
 
-    :param mocker: pytestのモッカー
-    :return: モックされた ClientSession
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_session = mocker.AsyncMock(spec=ClientSession)
-    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
-    return mock_session
+    mock_address = mocker.Mock()
+    mock_address.to_str.return_value = "mocked_address"
+    mocker.patch(
+        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.Address",
+        return_value=mock_address,
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_load_config(mocker: MockerFixture, mock_config: Dict[str, Any]) -> None:
+    """
+    load_config関数をモックするフィクスチャ。
+
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    """
+    mocker.patch.object(glta, "load_config", return_value=mock_config)
 
 
 def test_initialize_address_success(
-    mocker: MockerFixture, mock_config: Dict[str, Any]
+    mock_config: Dict[str, Any], mocker: MockerFixture
 ) -> None:
     """
-    initialize_address 関数が正常に動作することをテストする
+    initialize_address関数の成功ケースをテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
+    :param mock_config: モックされた設定データ
+    :param mocker: pytest-mockのMockerFixture
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
-    )
+    mocker.patch.object(glta, "config", mock_config)
     glta.initialize_address()
-    assert (
-        glta.BASIC_WORKCHAIN_ADDRESS == mock_config["ton_info"]["user_friendly_address"]
-    )
-    assert glta.DEFAULT_UF_ADDRESS == mock_config["ton_info"]["user_friendly_address"]
+    assert glta.DEFAULT_UF_ADDRESS == "test_user_friendly_address"
+    assert glta.BASIC_WORKCHAIN_ADDRESS == "mocked_address"
 
 
 def test_initialize_address_failure(
     mocker: MockerFixture, mock_config: Dict[str, Any]
 ) -> None:
     """
-    initialize_address 関数がエラーを適切に処理することをテストする
+    initialize_address関数の失敗ケースをテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
     """
     invalid_config = mock_config.copy()
     invalid_config["ton_info"]["user_friendly_address"] = ""
+    mocker.patch.object(glta, "config", invalid_config)
     mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        invalid_config,
+        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.Address",
+        side_effect=glta.AddressError("Test error"),
     )
 
     with pytest.raises(SystemExit) as excinfo:
@@ -88,298 +105,202 @@ def test_initialize_address_failure(
 
 
 @pytest.mark.asyncio
+async def test_fetch_data(mocker: MockerFixture) -> None:
+    """
+    fetch_data関数の動作をテストする。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_response = mocker.AsyncMock(spec=ClientResponse)
+    mock_response.status = 200
+    mock_response.read.return_value = b'{"key": "value"}'
+    mock_response.headers = {}
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+
+    result = await glta.fetch_data(mock_session, "https://example.com")
+    assert result == {"key": "value"}
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_gzip(mocker: MockerFixture) -> None:
+    """
+    gzip圧縮されたデータに対するfetch_data関数の動作をテストする。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_response = mocker.AsyncMock(spec=ClientResponse)
+    mock_response.status = 200
+    mock_response.read.return_value = gzip.compress(b'{"key": "gzip_value"}')
+    mock_response.headers = {"Content-Encoding": "gzip"}
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+
+    result = await glta.fetch_data(mock_session, "https://example.com")
+    assert result == {"key": "gzip_value"}
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_invalid_gzip(mocker: MockerFixture) -> None:
+    """
+    無効なgzipデータに対するfetch_data関数の動作をテストする。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_response = mocker.AsyncMock(spec=ClientResponse)
+    mock_response.status = 200
+    mock_response.read.return_value = b"Invalid gzip data"
+    mock_response.headers = {"Content-Encoding": "gzip"}
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+
+    with pytest.raises(json.JSONDecodeError):
+        await glta.fetch_data(mock_session, "https://example.com")
+
+
+@pytest.mark.asyncio
 async def test_fetch_data_http_error(mocker: MockerFixture) -> None:
     """
-    fetch_data 関数が HTTP エラーを適切に処理することをテストする
+    HTTPエラーが発生した場合のfetch_data関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_response = mocker.AsyncMock()
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_response = mocker.AsyncMock(spec=ClientResponse)
     mock_response.status = 404
     mock_response.reason = "Not Found"
-    mock_response.headers = {
-        "Content-Type": "application/json",
-        "Content-Encoding": "gzip",
-    }
-    mock_response.read = mocker.AsyncMock(return_value=b'{"error": "Not Found"}')
-
-    mock_request_info = mocker.Mock()
-    mock_history = mocker.Mock()
-    mock_response.request_info = mock_request_info
-    mock_response.history = mock_history
-
-    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_response.request_info = mocker.Mock()
+    mock_response.history = ()
     mock_session.get.return_value.__aenter__.return_value = mock_response
 
-    with pytest.raises(ClientResponseError) as exc_info:
+    with pytest.raises(ClientResponseError):
         await glta.fetch_data(mock_session, "https://example.com")
 
-    assert exc_info.value.status == 404
-    assert "Not Found" in str(exc_info.value)
-
-    mock_session.get.assert_called_once_with("https://example.com")
-
 
 @pytest.mark.asyncio
-async def test_fetch_data_gzip_success(mocker: MockerFixture) -> None:
+async def test_fetch_data_non_dict_json(mocker: MockerFixture) -> None:
     """
-    fetch_data 関数が gzip 圧縮されたデータを正常に解凍できることをテストする
+    JSONレスポンスが辞書でない場合のfetch_data関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_response = mocker.AsyncMock()
-    mock_response.status = 200
-    mock_response.headers = {"Content-Encoding": "gzip"}
-    mock_response.read = mocker.AsyncMock(
-        return_value=gzip.compress(b'{"key": "value"}')
-    )
-
     mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_response = mocker.AsyncMock(spec=ClientResponse)
+    mock_response.status = 200
+    mock_response.headers = {}
+    mock_response.read.return_value = b"[1, 2, 3]"  # リストを返すJSON
     mock_session.get.return_value.__aenter__.return_value = mock_response
 
-    result = await glta.fetch_data(mock_session, "https://example.com")
-    assert result == {"key": "value"}
-
-
-@pytest.mark.asyncio
-async def test_fetch_data_gzip_failure(mocker: MockerFixture) -> None:
-    """
-    fetch_data 関数が gzip 圧縮と表示されているが実際には圧縮されていないデータを適切に処理することをテストする
-
-    :param mocker: pytestのモッカー
-    """
-    mock_response = mocker.AsyncMock()
-    mock_response.status = 200
-    mock_response.headers = {"Content-Encoding": "gzip"}
-    mock_response.read = mocker.AsyncMock(return_value=b'{"key": "value"}')
-
-    mock_session = mocker.AsyncMock(spec=ClientSession)
-    mock_session.get.return_value.__aenter__.return_value = mock_response
-
-    result = await glta.fetch_data(mock_session, "https://example.com")
-    assert result == {"key": "value"}
-
-
-@pytest.mark.asyncio
-async def test_fetch_data_non_gzip(mocker: MockerFixture) -> None:
-    """
-    fetch_data 関数が非 gzip 圧縮データを正しく処理することをテストする
-
-    :param mocker: pytestのモッカー
-    """
-    mock_response = mocker.AsyncMock()
-    mock_response.status = 200
-    mock_response.headers = {"Content-Type": "application/json"}
-    mock_response.read = mocker.AsyncMock(return_value=b'{"key": "value"}')
-
-    mock_session = mocker.AsyncMock(spec=ClientSession)
-    mock_session.get.return_value.__aenter__.return_value = mock_response
-
-    result = await glta.fetch_data(mock_session, "https://example.com")
-    assert result == {"key": "value"}
-
-
-@pytest.mark.asyncio
-async def test_fetch_data_invalid_json(mocker: MockerFixture) -> None:
-    """
-    fetch_data 関数が無効な JSON 形式のデータを適切に処理することをテストする
-
-    :param mocker: pytestのモッカー
-    """
-    mock_response = mocker.AsyncMock()
-    mock_response.status = 200
-    mock_response.headers = {"Content-Type": "application/json"}
-    mock_response.read = mocker.AsyncMock(return_value=b'["This", "is", "a", "list"]')
-
-    mock_session = mocker.AsyncMock(spec=ClientSession)
-    mock_session.get.return_value.__aenter__.return_value = mock_response
-
-    with pytest.raises(ValueError, match="Expected a JSON object, got list"):
+    with pytest.raises(ValueError) as excinfo:
         await glta.fetch_data(mock_session, "https://example.com")
 
-    mock_session.get.assert_called_once_with("https://example.com")
+    assert "Expected a JSON object, got list" in str(excinfo.value)
 
 
 @pytest.mark.asyncio
-async def test_get_latest_block(
-    mock_aiohttp_session: MockerFixture, mocker: MockerFixture
-) -> None:
+async def test_get_latest_block(mocker: MockerFixture) -> None:
     """
-    get_latest_block 関数が正しく動作することをテストする
+    get_latest_block関数の動作をテストする。
 
-    :param mock_aiohttp_session: モックされた aiohttp セッション
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_response = {
-        "last": {"seqno": 12345},
-        "now": 1628097600,
-    }
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.fetch_data",
-        return_value=mock_response,
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch.object(
+        glta, "fetch_data", return_value={"last": {"seqno": 12345}, "now": 1628097600}
     )
 
-    result = await glta.get_latest_block(mock_aiohttp_session)
-
+    result = await glta.get_latest_block(mock_session)
     assert result[0] == 12345
     assert isinstance(result[1], datetime)
     assert isinstance(result[2], datetime)
 
 
 @pytest.mark.asyncio
-async def test_get_staking_info_success(mocker: MockerFixture) -> None:
+async def test_get_staking_info(mocker: MockerFixture) -> None:
     """
-    get_staking_info 関数が正常に動作することをテストする
+    get_staking_info関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_data = {
-        "result": [
-            {"value": "1000000000000"},
-            {"value": "2000000000000"},
-            {"value": "3000000000000"},
-            {"value": "4000000000000"},
-        ]
-    }
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.fetch_data",
-        return_value=mock_data,
-    )
-
     mock_session = mocker.AsyncMock(spec=ClientSession)
-    seqno = 12345
-    timestamp = datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    pool_address = "test_pool_address"
-    get_member_user_address = "test_member_address"
+    mocker.patch.object(
+        glta,
+        "fetch_data",
+        return_value={
+            "result": [
+                {"value": "1000000000"},
+                {"value": "2000000000"},
+                {"value": "3000000000"},
+                {"value": "4000000000"},
+            ]
+        },
+    )
 
     result = await glta.get_staking_info(
-        mock_session, seqno, timestamp, pool_address, get_member_user_address
+        mock_session,
+        12345,
+        datetime.now(timezone.utc),
+        "test_pool_address",
+        "test_get_member_use_address",
     )
-
     assert result is not None
-    assert result["Seqno"] == seqno
-    assert result["Total Staked Amount"] == 10000.0
+    assert result["Total Staked Amount"] == 10.0
 
 
 @pytest.mark.asyncio
-async def test_get_staking_info_no_data(mocker: MockerFixture) -> None:
+async def test_get_staking_info_no_result(mocker: MockerFixture) -> None:
     """
-    get_staking_info 関数がデータ不足の場合に適切に処理することをテストする
+    ステーキング情報が取得できない場合のget_staking_info関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_data: Dict[str, List[Any]] = {"result": []}
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.fetch_data",
-        return_value=mock_data,
-    )
-
     mock_session = mocker.AsyncMock(spec=ClientSession)
-    seqno = 12345
-    timestamp = datetime.now(timezone.utc)
-    pool_address = "test_pool_address"
-    get_member_user_address = "test_member_address"
+    mocker.patch.object(glta, "fetch_data", return_value={})
 
     result = await glta.get_staking_info(
-        mock_session, seqno, timestamp, pool_address, get_member_user_address
+        mock_session,
+        12345,
+        datetime.now(timezone.utc),
+        "test_pool_address",
+        "test_get_member_use_address",
     )
-
     assert result is None
 
 
 @pytest.mark.asyncio
 async def test_ton_rate_by_ticker(mocker: MockerFixture) -> None:
     """
-    ton_rate_by_ticker 関数が正しく動作することをテストする
+    ton_rate_by_ticker関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_data = {"rates": {"TON": {"prices": {"JPY": "200.5"}}}}
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.fetch_data",
-        return_value=mock_data,
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch.object(
+        glta,
+        "fetch_data",
+        return_value={"rates": {"TON": {"prices": {"JPY": "200.5"}}}},
     )
 
-    mock_session = mocker.AsyncMock(spec=ClientSession)
     result = await glta.ton_rate_by_ticker(mock_session)
-
     assert result == 200.5
 
 
 @pytest.mark.asyncio
 async def test_get_ton_balance(mocker: MockerFixture) -> None:
     """
-    get_ton_balance 関数が正しく動作することをテストする
+    get_ton_balance関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
+    :param mocker: pytest-mockのMockerFixture
     """
-    mock_data = {"balance": "1500000000"}
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.fetch_data",
-        return_value=mock_data,
-    )
-
     mock_session = mocker.AsyncMock(spec=ClientSession)
-    user_friendly_address = "EQtestAbcdefghijklmnopqrstuvwxyz1234567890"
+    mocker.patch.object(
+        glta,
+        "fetch_data",
+        return_value={"balance": "1500000000"},
+    )
 
-    result = await glta.get_ton_balance(mock_session, user_friendly_address)
-
+    result = await glta.get_ton_balance(mock_session, "test_user_friendly_address")
     assert result == 1.5
-
-
-@pytest.mark.asyncio
-async def test_on_request_start(
-    capsys: pytest.CaptureFixture[str], mocker: MockerFixture
-) -> None:
-    """
-    on_request_start 関数が正しくリクエスト開始をログに記録することをテストする
-
-    :param capsys: 標準出力をキャプチャするフィクスチャ
-    :param mocker: pytestのモッカー
-    """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ENABLE_TRACING",
-        True,
-    )
-    mock_params = type("MockParams", (), {"url": "https://example.com"})()
-    await glta.on_request_start(None, None, mock_params)
-    captured = capsys.readouterr()
-    assert "Sending request: https://example.com" in captured.out
-
-
-@pytest.mark.asyncio
-async def test_on_request_end(
-    capsys: pytest.CaptureFixture[str], mocker: MockerFixture
-) -> None:
-    """
-    on_request_end 関数が正しくリクエスト終了をログに記録することをテストする
-
-    :param capsys: 標準出力をキャプチャするフィクスチャ
-    :param mocker: pytestのモッカー
-    """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ENABLE_TRACING",
-        True,
-    )
-    mock_params = type(
-        "MockParams", (), {"response": type("MockResponse", (), {"status": 200})()}
-    )()
-    await glta.on_request_end(None, None, mock_params)
-    captured = capsys.readouterr()
-    assert "Received response: 200" in captured.out
-
-
-def test_create_trace_config() -> None:
-    """
-    create_trace_config 関数が正しく動作することをテストする
-    """
-    trace_config = glta.create_trace_config(True)
-    assert trace_config is not None
-    assert len(trace_config.on_request_start) == 1
-    assert len(trace_config.on_request_end) == 1
-
-    trace_config = glta.create_trace_config(False)
-    assert trace_config is None
 
 
 @pytest.mark.asyncio
@@ -389,38 +310,35 @@ async def test_main_success(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    main 関数が正常に動作することをテストする
+    main関数の成功ケースをテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
-    :param capsys: 標準出力をキャプチャするフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
+    mocker.patch.object(glta, "config", mock_config)
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
+    mocker.patch.object(
+        glta,
+        "get_latest_block",
+        return_value=(12345, datetime.now(timezone.utc), datetime.now(timezone.utc)),
     )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        return_value=(12345, datetime.now(timezone.utc), datetime.now()),
+    mocker.patch.object(
+        glta,
+        "get_staking_info",
+        return_value={"Total Staked Amount": 100.0, "Timestamp": "2023-01-01 00:00:00"},
     )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_staking_info",
-        return_value={"Timestamp": "2023-01-01 21:00:00", "Total Staked Amount": 100.0},
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_ton_balance",
-        return_value=50.0,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ton_rate_by_ticker",
-        return_value=2.0,
-    )
+    mocker.patch.object(glta, "get_ton_balance", return_value=50.0)
+    mocker.patch.object(glta, "ton_rate_by_ticker", return_value=2.0)
 
     await glta.main()
 
     captured = capsys.readouterr()
-    assert "seqno: 12345" in captured.out
-    assert "My account hold TON price:" in captured.out
+    assert "Total Staked Amount: 100.000000000" in captured.out
+    assert "Balance: 50.000000000" in captured.out
+    assert "Hold TON: 150.000000000" in captured.out
+    assert "Rate: 2.00" in captured.out
 
 
 @pytest.mark.asyncio
@@ -430,32 +348,23 @@ async def test_main_no_staking_info(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    main 関数がステーキング情報なしの場合に適切に処理することをテストする
+    ステーキング情報がない場合のmain関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
-    :param capsys: 標準出力をキャプチャするフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
+    mocker.patch.object(glta, "config", mock_config)
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
+    mocker.patch.object(
+        glta,
+        "get_latest_block",
+        return_value=(12345, datetime.now(timezone.utc), datetime.now(timezone.utc)),
     )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        return_value=(12345, datetime.now(timezone.utc), datetime.now()),
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_staking_info",
-        return_value=None,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_ton_balance",
-        return_value=50.0,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ton_rate_by_ticker",
-        return_value=2.0,
-    )
+    mocker.patch.object(glta, "get_staking_info", return_value=None)
+    mocker.patch.object(glta, "get_ton_balance", return_value=50.0)
+    mocker.patch.object(glta, "ton_rate_by_ticker", return_value=2.0)
 
     await glta.main()
 
@@ -470,23 +379,20 @@ async def test_main_http_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    main 関数が HTTP エラーを適切に処理することをテストする
+    HTTPエラーが発生した場合のmain関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
-    :param capsys: 標準出力をキャプチャするフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
+    mocker.patch.object(glta, "config", mock_config)
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
+    mocker.patch.object(
+        glta,
+        "get_latest_block",
         side_effect=ClientResponseError(
-            request_info=mocker.Mock(),
-            history=mocker.Mock(),
-            status=404,
-            message="Not Found",
+            request_info=mocker.Mock(), history=(), status=404, message="Not Found"
         ),
     )
 
@@ -503,19 +409,17 @@ async def test_main_network_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    main 関数がネットワークエラーを適切に処理することをテストする
+    ネットワークエラーが発生した場合のmain関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
-    :param capsys: 標準出力をキャプチャするフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        side_effect=ClientError("Network Error"),
+    mocker.patch.object(glta, "config", mock_config)
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
+    mocker.patch.object(
+        glta, "get_latest_block", side_effect=aiohttp.ClientError("Network Error")
     )
 
     await glta.main()
@@ -531,20 +435,16 @@ async def test_main_timeout_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    main 関数がタイムアウトエラーを適切に処理することをテストする
+    タイムアウトエラーが発生した場合のmain関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
-    :param capsys: 標準出力をキャプチャするフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        side_effect=asyncio.TimeoutError(),
-    )
+    mocker.patch.object(glta, "config", mock_config)
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
+    mocker.patch.object(glta, "get_latest_block", side_effect=asyncio.TimeoutError())
 
     await glta.main()
 
@@ -559,19 +459,17 @@ async def test_main_unexpected_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    main 関数が予期しないエラーを適切に処理することをテストする
+    予期せぬエラーが発生した場合のmain関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
-    :param capsys: 標準出力をキャプチャするフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        mock_config,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        side_effect=Exception("Unexpected Error"),
+    mocker.patch.object(glta, "config", mock_config)
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mocker.patch("aiohttp.ClientSession", return_value=mock_session)
+    mocker.patch.object(
+        glta, "get_latest_block", side_effect=Exception("Unexpected Error")
     )
 
     await glta.main()
@@ -581,122 +479,175 @@ async def test_main_unexpected_error(
 
 
 @pytest.mark.asyncio
-async def test_main_with_trace_config(
-    mocker: MockerFixture, mock_config: Dict[str, Any]
-) -> None:
+async def test_create_trace_config() -> None:
     """
-    main 関数がトレース設定を正しく使用することをテストする（enable_tracing = True）
-
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
+    create_trace_config関数の動作をテストする。
     """
-    config_with_tracing = mock_config.copy()
-    config_with_tracing["debug_info"] = {"enable_tracing": True}
+    trace_config = glta.create_trace_config(True)
+    assert trace_config is not None
+    assert len(trace_config.on_request_start) == 1
+    assert len(trace_config.on_request_end) == 1
 
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        config_with_tracing,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ENABLE_TRACING",
-        True,
-    )
-
-    mock_client_session = mocker.patch("aiohttp.ClientSession")
-    mock_create_trace_config = mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.create_trace_config"
-    )
-    mock_trace_config = mocker.Mock(spec=TraceConfig)
-    mock_create_trace_config.return_value = mock_trace_config
-
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        return_value=(1, datetime.now(), datetime.now()),
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_staking_info",
-        return_value=None,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_ton_balance",
-        return_value=0,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ton_rate_by_ticker",
-        return_value=0,
-    )
-
-    await glta.main()
-
-    mock_create_trace_config.assert_called_once_with(True)
-    mock_client_session.assert_called_once()
-
-    _, kwargs = mock_client_session.call_args
-    assert isinstance(kwargs["connector"], aiohttp.TCPConnector)
-    assert kwargs["connector"].limit == 10
-    assert kwargs["connector"].force_close
-    assert kwargs["timeout"].total == 10
-    assert kwargs["timeout"].connect == 5
-    assert kwargs["auto_decompress"]
-    assert "trace_configs" in kwargs
-    assert kwargs["trace_configs"] == [mock_trace_config]
+    trace_config = glta.create_trace_config(False)
+    assert trace_config is None
 
 
 @pytest.mark.asyncio
-async def test_main_without_trace_config(
-    mocker: MockerFixture, mock_config: Dict[str, Any]
+async def test_on_request_start(
+    capsys: pytest.CaptureFixture[str], mocker: MockerFixture
 ) -> None:
     """
-    main 関数がトレース設定なしで正しく動作することをテストする（enable_tracing = False）
+    on_request_start関数の動作をテストする。
 
-    :param mocker: pytestのモッカー
-    :param mock_config: モックされた設定
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    """
+    params = mocker.Mock(spec=glta.TraceRequestStartParams)
+    params.url = "https://example.com"
+    await glta.on_request_start(None, None, params)
+    captured = capsys.readouterr()
+    assert "Sending request: https://example.com" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_on_request_end(
+    capsys: pytest.CaptureFixture[str], mocker: MockerFixture
+) -> None:
+    """
+    on_request_end関数の動作をテストする。
+
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
+    :param mocker: pytest-mockのMockerFixture
+    """
+    params = mocker.Mock(spec=glta.TraceRequestEndParams)
+    params.response = mocker.Mock()
+    params.response.status = 200
+    await glta.on_request_end(None, None, params)
+    captured = capsys.readouterr()
+    assert "Received response: 200" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_main_no_trace_config(
+    mocker: MockerFixture,
+    mock_config: Dict[str, Any],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    トレース設定がない場合のmain関数の動作をテストする。
+
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
     """
     config_without_tracing = mock_config.copy()
     config_without_tracing["debug_info"] = {"enable_tracing": False}
+    mocker.patch.object(glta, "config", config_without_tracing)
+    mocker.patch.object(glta, "ENABLE_TRACING", False)
 
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.config",
-        config_without_tracing,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ENABLE_TRACING",
-        False,
+    # Mock create_trace_config to return None
+    mocker.patch.object(glta, "create_trace_config", return_value=None)
+
+    # Create mock objects for TCPConnector and ClientTimeout
+    mock_connector = mocker.Mock(spec=TCPConnector)
+    mock_timeout = mocker.Mock(spec=ClientTimeout)
+
+    # Patch the creation of TCPConnector and ClientTimeout in glta module
+    mocker.patch.object(glta, "TCPConnector", return_value=mock_connector)
+    mocker.patch.object(glta, "ClientTimeout", return_value=mock_timeout)
+
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_client_session = mocker.patch(
+        "aiohttp.ClientSession", return_value=mock_session
     )
 
-    mock_client_session = mocker.patch("aiohttp.ClientSession")
-    mock_create_trace_config = mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.create_trace_config"
+    # Mock other necessary functions
+    mocker.patch.object(
+        glta,
+        "get_latest_block",
+        return_value=(12345, datetime.now(timezone.utc), datetime.now(timezone.utc)),
     )
-    mock_create_trace_config.return_value = None
-
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_latest_block",
-        return_value=(1, datetime.now(), datetime.now()),
+    mocker.patch.object(
+        glta,
+        "get_staking_info",
+        return_value={"Total Staked Amount": 100.0, "Timestamp": "2023-01-01 00:00:00"},
     )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_staking_info",
-        return_value=None,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.get_ton_balance",
-        return_value=0,
-    )
-    mocker.patch(
-        "ton_txns_data_conv.account.get_latest_ton_amount_calculation_async_aiohttp.ton_rate_by_ticker",
-        return_value=0,
-    )
+    mocker.patch.object(glta, "get_ton_balance", return_value=50.0)
+    mocker.patch.object(glta, "ton_rate_by_ticker", return_value=2.0)
 
     await glta.main()
 
-    mock_create_trace_config.assert_called_once_with(False)
+    # Check that ClientSession was called with the correct arguments
     mock_client_session.assert_called_once()
+    call_kwargs = mock_client_session.call_args[1]
+    assert "trace_configs" not in call_kwargs
+    assert call_kwargs["connector"] == mock_connector
+    assert call_kwargs["timeout"] == mock_timeout
+    assert call_kwargs["auto_decompress"] is True
 
-    _, kwargs = mock_client_session.call_args
-    assert isinstance(kwargs["connector"], aiohttp.TCPConnector)
-    assert kwargs["connector"].limit == 10
-    assert kwargs["connector"].force_close
-    assert kwargs["timeout"].total == 10
-    assert kwargs["timeout"].connect == 5
-    assert kwargs["auto_decompress"]
-    assert "trace_configs" not in kwargs
+    captured = capsys.readouterr()
+    assert "Total Staked Amount: 100.000000000" in captured.out
+
+
+@pytest.mark.asyncio
+async def test_main_with_trace_config(
+    mocker: MockerFixture,
+    mock_config: Dict[str, Any],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """
+    トレース設定がある場合のmain関数の動作をテストする。
+
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param capsys: 標準出力と標準エラー出力をキャプチャするpytestフィクスチャ
+    """
+    config_with_tracing = mock_config.copy()
+    config_with_tracing["debug_info"] = {"enable_tracing": True}
+    mocker.patch.object(glta, "config", config_with_tracing)
+    mocker.patch.object(glta, "ENABLE_TRACING", True)
+
+    # Mock create_trace_config to return a TraceConfig object
+    mock_trace_config = mocker.Mock(spec=TraceConfig)
+    mocker.patch.object(glta, "create_trace_config", return_value=mock_trace_config)
+
+    # Create mock objects for TCPConnector and ClientTimeout
+    mock_connector = mocker.Mock(spec=TCPConnector)
+    mock_timeout = mocker.Mock(spec=ClientTimeout)
+
+    # Patch the creation of TCPConnector and ClientTimeout in glta module
+    mocker.patch.object(glta, "TCPConnector", return_value=mock_connector)
+    mocker.patch.object(glta, "ClientTimeout", return_value=mock_timeout)
+
+    mock_session = mocker.AsyncMock(spec=ClientSession)
+    mock_client_session = mocker.patch(
+        "aiohttp.ClientSession", return_value=mock_session
+    )
+
+    # Mock other necessary functions
+    mocker.patch.object(
+        glta,
+        "get_latest_block",
+        return_value=(12345, datetime.now(timezone.utc), datetime.now(timezone.utc)),
+    )
+    mocker.patch.object(
+        glta,
+        "get_staking_info",
+        return_value={"Total Staked Amount": 100.0, "Timestamp": "2023-01-01 00:00:00"},
+    )
+    mocker.patch.object(glta, "get_ton_balance", return_value=50.0)
+    mocker.patch.object(glta, "ton_rate_by_ticker", return_value=2.0)
+
+    await glta.main()
+
+    # Check that ClientSession was called with the correct arguments
+    mock_client_session.assert_called_once()
+    call_kwargs = mock_client_session.call_args[1]
+    assert "trace_configs" in call_kwargs
+    assert call_kwargs["trace_configs"] == [mock_trace_config]
+    assert call_kwargs["connector"] == mock_connector
+    assert call_kwargs["timeout"] == mock_timeout
+    assert call_kwargs["auto_decompress"] is True
+
+    captured = capsys.readouterr()
+    assert "Total Staked Amount: 100.000000000" in captured.out

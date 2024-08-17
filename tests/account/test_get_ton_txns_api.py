@@ -13,6 +13,11 @@ from ton_txns_data_conv.account import get_ton_txns_api
 
 @pytest.fixture
 def mock_config() -> Dict[str, Any]:
+    """
+    モックされた設定データを提供するフィクスチャ。
+
+    :return: テスト用の設定データを含む辞書
+    """
     return {
         "ton_api_info": {"api_key": "test_api_key"},
         "ton_info": {
@@ -25,6 +30,11 @@ def mock_config() -> Dict[str, Any]:
 
 @pytest.fixture
 def mock_transactions() -> List[Dict[str, Any]]:
+    """
+    モックされたトランザクションデータを提供するフィクスチャ。
+
+    :return: テスト用のトランザクションデータのリスト
+    """
     return [
         {"id": 1, "amount": 1000000000},
         {"id": 2, "amount": 2000000000},
@@ -37,7 +47,15 @@ def test_save_json_file(
     mock_transactions: List[Dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test save_json_file function"""
+    """
+    save_json_file関数のテスト。
+
+    JSONファイルが正しく保存されることを確認する。
+
+    :param tmp_path: pytest提供の一時ディレクトリパス
+    :param mock_transactions: モックされたトランザクションデータ
+    :param monkeypatch: pytestのmonkeypatchフィクスチャ
+    """
     monkeypatch.setattr(get_ton_txns_api, "project_root", tmp_path)
     output_dir = tmp_path / "ton_txns_data_conv" / "output"
     output_dir.mkdir(parents=True)
@@ -58,7 +76,15 @@ def test_save_json_file_overwrite_accepted(
     mock_transactions: List[Dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test save_json_file function when overwrite is accepted"""
+    """
+    save_json_file関数の上書き受け入れテスト。
+
+    既存ファイルの上書きが正しく行われることを確認する。
+
+    :param tmp_path: pytest提供の一時ディレクトリパス
+    :param mock_transactions: モックされたトランザクションデータ
+    :param monkeypatch: pytestのmonkeypatchフィクスチャ
+    """
     monkeypatch.setattr(get_ton_txns_api, "project_root", tmp_path)
     output_dir = tmp_path / "ton_txns_data_conv" / "output"
     output_dir.mkdir(parents=True)
@@ -84,7 +110,15 @@ def test_save_json_file_overwrite_denied(
     mock_transactions: List[Dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test save_json_file function when overwrite is denied"""
+    """
+    save_json_file関数の上書き拒否テスト。
+
+    上書きが拒否された場合の動作を確認する。
+
+    :param tmp_path: pytest提供の一時ディレクトリパス
+    :param mock_transactions: モックされたトランザクションデータ
+    :param monkeypatch: pytestのmonkeypatchフィクスチャ
+    """
     monkeypatch.setattr(get_ton_txns_api, "project_root", tmp_path)
     output_dir = tmp_path / "ton_txns_data_conv" / "output"
     output_dir.mkdir(parents=True)
@@ -111,7 +145,15 @@ def test_save_json_file_overwrite_denied_exit(
     mock_transactions: List[Dict[str, Any]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test save_json_file function when overwrite is denied leading to exit"""
+    """
+    save_json_file関数の上書き拒否テスト。
+
+    上書きが拒否された場合の動作を確認する。
+
+    :param tmp_path: pytest提供の一時ディレクトリパス
+    :param mock_transactions: モックされたトランザクションデータ
+    :param monkeypatch: pytestのmonkeypatchフィクスチャ
+    """
     monkeypatch.setattr(get_ton_txns_api, "project_root", tmp_path)
     output_dir = tmp_path / "ton_txns_data_conv" / "output"
     output_dir.mkdir(parents=True)
@@ -142,7 +184,15 @@ def test_save_json_file_overwrite_denied_exit(
 def test_get_transactions_v3(
     mocker: MockerFixture, mock_transactions: List[Dict[str, Any]], save_json: bool
 ) -> None:
-    """Test get_transactions_v3 function"""
+    """
+    get_transactions_v3関数のテスト。
+
+    トランザクションの取得と保存が正しく行われることを確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_transactions: モックされたトランザクションデータ
+    :param save_json: JSONファイル保存フラグ
+    """
     mock_response = mocker.Mock()
     mock_response.json.return_value = {"transactions": mock_transactions}
     mocker.patch(
@@ -169,7 +219,13 @@ def test_get_transactions_v3(
 
 
 def test_get_transactions_v3_multiple_calls(mocker: MockerFixture) -> None:
-    """Test get_transactions_v3 function with multiple API calls"""
+    """
+    get_transactions_v3関数の複数回呼び出しテスト。
+
+    複数回のAPI呼び出しが正しく処理されることを確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
     mock_responses = [
         mocker.Mock(json=lambda: {"transactions": [{"id": 1}]}),
         mocker.Mock(json=lambda: {"transactions": [{"id": 2}]}),
@@ -188,7 +244,13 @@ def test_get_transactions_v3_multiple_calls(mocker: MockerFixture) -> None:
 
 
 def test_get_transactions_v3_empty_response(mocker: MockerFixture) -> None:
-    """Test get_transactions_v3 function with empty response"""
+    """
+    get_transactions_v3関数の空レスポンステスト。
+
+    空のレスポンスが正しく処理されることを確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
     mock_response = mocker.Mock()
     mock_response.json.return_value = {"transactions": []}
     mocker.patch(
@@ -202,7 +264,13 @@ def test_get_transactions_v3_empty_response(mocker: MockerFixture) -> None:
 
 
 def test_get_transactions_v3_request_exception(mocker: MockerFixture) -> None:
-    """Test get_transactions_v3 function with request exception"""
+    """
+    get_transactions_v3関数のリクエスト例外テスト。
+
+    リクエスト例外が正しく処理されることを確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
     mocker.patch(
         "ton_txns_data_conv.account.get_ton_txns_api.requests.get",
         side_effect=requests.exceptions.RequestException,
@@ -214,7 +282,13 @@ def test_get_transactions_v3_request_exception(mocker: MockerFixture) -> None:
 
 
 def test_get_transactions_v3_json_decode_error(mocker: MockerFixture) -> None:
-    """Test get_transactions_v3 function with JSON decode error"""
+    """
+    get_transactions_v3関数のJSONデコードエラーテスト。
+
+    JSONデコードエラーが正しく処理されることを確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    """
     mock_response = mocker.Mock()
     mock_response.json.side_effect = json.JSONDecodeError("Test error", "", 0)
     mocker.patch(
@@ -227,13 +301,20 @@ def test_get_transactions_v3_json_decode_error(mocker: MockerFixture) -> None:
     assert result == []
 
 
-# main 関数のテスト
 def test_main(
     mocker: MockerFixture,
     mock_config: Dict[str, Any],
     mock_transactions: List[Dict[str, Any]],
 ) -> None:
-    """Test main function"""
+    """
+    main関数のテスト。
+
+    メイン処理が正しく実行されることを確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    :param mock_transactions: モックされたトランザクションデータ
+    """
     mocker.patch(
         "ton_txns_data_conv.account.get_ton_txns_api.load_config",
         return_value=mock_config,
@@ -255,7 +336,14 @@ def test_main(
 
 
 def test_main_no_api_key(mocker: MockerFixture, mock_config: Dict[str, Any]) -> None:
-    """Test main function without API key"""
+    """
+    APIキーなしでのmain関数のテスト。
+
+    APIキーがない場合の動作を確認する。
+
+    :param mocker: pytest-mockのMockerFixture
+    :param mock_config: モックされた設定データ
+    """
     mock_config["ton_api_info"]["api_key"] = ""
     mocker.patch(
         "ton_txns_data_conv.account.get_ton_txns_api.load_config",

@@ -1,4 +1,3 @@
-import platform
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -31,9 +30,9 @@ def mock_config(mocker: MockerFixture) -> Dict[str, Any]:
     """
     return {
         "ton_info": {
-            "user_friendly_address": "EQCBVndbeTJeXWLJcNbBlsM5bA-ixyWs6JpZfRl3AbJ8G0Hk",
-            "pool_address": "EQAA_0bO5q9TFm3UmfWhJapdP9_wExlDZUVAyBwTJpartqcy",
-            "get_member_use_address": "EQAA_0bO5q9TFm3UmfWhJapdP9_wExlDZUVAyBwTJpartqcy",
+            "user_friendly_address": "test_user_friendly_address",
+            "pool_address": "test_pool_address",
+            "get_member_use_address": "test_get_member_use_address",
         },
         "staking_info": {"local_timezone": 9},
         "cryptact_info": {"counter": "JPY"},
@@ -305,10 +304,7 @@ def test_main_success(
     assert "Balance: 10.000000000" in captured.out
     assert "Hold TON: 30.000000000" in captured.out
     assert "Rate: 200.00" in captured.out
-    if platform.system() == "Darwin":
-        assert "My account hold TON price: ￥6000.00" in captured.out
-    else:
-        assert "My account hold TON price: ¥6000.00" in captured.out
+    assert "My account hold TON price: ¥6000.00" in captured.out
 
 
 def test_main_no_staking_info(
