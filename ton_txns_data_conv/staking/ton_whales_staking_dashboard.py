@@ -28,7 +28,11 @@ project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 
+config_values: Dict[str, Any] = {}
+
+
 def initialize_config() -> Dict[str, Any]:
+    global config_values
     from ton_txns_data_conv.utils.config_loader import load_config
 
     config = load_config()
@@ -84,13 +88,21 @@ def initialize_config() -> Dict[str, Any]:
         sys.exit(1)
 
 
-# Initialisation
-try:
+# Initialize config_values only at main runtime
+if __name__ == "__main__":
     config_values = initialize_config()
-    globals().update(config_values)
-except Exception as e:
-    print(f"Failed to initialize configuration: {str(e)}")
-    sys.exit(1)
+else:
+    # Default value when testing or importing
+    config_values = {
+        "BASIC_WORKCHAIN_ADDRESS": "",
+        "DEFAULT_POOL_ADDRESS": "",
+        "DEFAULT_GET_MEMBER_USER_ADDRESS": "",
+        "DEFAULT_STAKING_CALC_ADJUST_VALUE": 0.1,
+        "DEFAULT_LOCAL_TIMEZONE": 0,
+        "DEFAULT_COUNTER_VAL": "",
+        "TZ": timezone.utc,
+        "SAVE_ALLOW_STKRWD": False,
+    }
 
 
 async def get_latest_block(session: aiohttp.ClientSession) -> Tuple[int, datetime]:
@@ -103,11 +115,12 @@ async def get_latest_block(session: aiohttp.ClientSession) -> Tuple[int, datetim
     Returns:
         Tuple[int, datetime]: The sequence number of the latest block and its timestamp.
     """
-    async with session.get("https://mainnet-v4.tonhubapi.com/block/latest") as response:
+    response = await session.get("https://mainnet-v4.tonhubapi.com/block/latest")
+    async with response:
         data = await response.json()
-        return data["last"]["seqno"], datetime.fromtimestamp(
-            data["now"], tz=timezone.utc
-        )
+        seqno = data["last"]["seqno"]
+        ts_utc = datetime.fromtimestamp(data["now"], tz=timezone.utc)
+    return seqno, ts_utc
 
 
 async def get_block_by_unix_time(
@@ -124,9 +137,10 @@ async def get_block_by_unix_time(
         Tuple[Optional[int], Optional[datetime]]: The sequence number and timestamp of the block,
         or (None, None) if the block doesn't exist.
     """
-    async with session.get(
+    response = await session.get(
         f"https://mainnet-v4.tonhubapi.com/block/utime/{int(unix_time)}"
-    ) as response:
+    )
+    async with response:
         data = await response.json()
         if data["exist"]:
             shard_data = data["block"]["shards"][0]
@@ -159,12 +173,11 @@ async def get_staking_info(
         or None if the information couldn't be retrieved.
     """
     url = f"https://mainnet-v4.tonhubapi.com/block/{seqno}/{pool_address}/run/get_member/{get_member_user_address}"
-    async with session.get(url) as response:
+    response = await session.get(url)
+    async with response:
         data = await response.json()
         if "result" in data and len(data["result"]) >= 4:
             return {
-                # UTC Time: 2024-07-15 08:00:00+00:00
-                # JST Time: 2024-07-15 17:00:00+09:00
                 "Timestamp": timestamp.astimezone(config_values["TZ"]),
                 "Seqno": seqno,
                 "Staked Amount": int(data["result"][0]["value"]) / 1e9,
@@ -920,4 +933,5 @@ def handle_overwrite_confirmation(
 
 
 if __name__ == "__main__":  # pragma: no cover
-    app.run_server(debug=True)
+    # To allow access from other computers on the local network
+    app.run(debug=True, host="0.0.0.0", port=8050)
