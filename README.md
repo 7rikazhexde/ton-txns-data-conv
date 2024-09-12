@@ -82,7 +82,7 @@ python ton_txns_data_conv/account/get_ton_txns_api.py
 
 ### Creating custom files for cryptact
 
-[get_ton_transactions.py](./ton_txns_data_conv/get_ton_transactions.py) to create a custom file for Cryptact from the acquired transactions data.
+[create_ton_stkrwd_cryptact_custom.py](./ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py) to create a custom file for Cryptact from the acquired transactions data.
 
 > [!CAUTION]
 > - The CSV file is created in the custom file format for staking rewards in Cryptact. Refer to <https://support.cryptact.com/hc/en-us/articles/360002571312-Custom-File-for-any-other-trades#menu210> for more information on the custom file format.  
@@ -95,7 +95,7 @@ python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 
 ### Visualize TON Whales Staking Amount History
 
-Use [ton_whales_staking_dashboard.py](./ton_txns_data_conv/ton_whales_staking_dashboard.py) to visualize and analyze the staking amount history for TON Whales.
+Use [ton_whales_staking_dashboard.py](./ton_txns_data_conv/staking/ton_whales_staking_dashboard.py) to visualize and analyze the staking amount history for TON Whales.
 
 ![TON Whales Staking Amount History Dashboard](.other_data/TON%20Whales%20Staking%20Amount%20History.png)
 *Screenshot of the TON Whales Staking Amount History Dashboard*

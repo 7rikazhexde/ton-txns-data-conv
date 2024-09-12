@@ -82,7 +82,7 @@ python ton_txns_data_conv/account/get_ton_txns_api.py
 
 ### cryptact用カスタムファイルの作成
 
-[get_ton_transactions.py](./ton_txns_data_conv/get_ton_transactions.py)を使用して、取得したトランザクションデータからCryptact用のカスタムファイルを作成します。
+[create_ton_stkrwd_cryptact_custom.py](./ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py)を使用して、取得したトランザクションデータからCryptact用のカスタムファイルを作成します。
 
 > [!CAUTION]
 > - CSVファイルは、Cryptactのステーキング報酬用カスタムファイル形式で作成されます。カスタムファイル形式の詳細については、<https://support.cryptact.com/hc/ja/articles/360002571312-%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%A0%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E4%BD%9C%E6%88%90%E6%96%B9%E6%B3%95#h_01GXMK12D426VV4S6GAJHV9T2B> を参照してください。
@@ -95,7 +95,7 @@ python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 
 ### TON Whalesのステーキング報酬履歴の可視化
 
-[ton_whales_staking_dashboard.py](./ton_txns_data_conv/ton_whales_staking_dashboard.py)を使用して、TON Whalesのステーキング報酬履歴を可視化・分析します。
+[ton_whales_staking_dashboard.py](./ton_txns_data_conv/staking/ton_whales_staking_dashboard.py)を使用して、TON Whalesのステーキング報酬履歴を可視化・分析します。
 
 ![TON Whalesステーキング報酬履歴ダッシュボード](.other_data/TON%20Whales%20Staking%20Amount%20History.png)
 *TON Whalesステーキング報酬履歴ダッシュボードのスクリーンショット*
