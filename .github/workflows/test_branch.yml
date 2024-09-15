@@ -1,4 +1,8 @@
-name: Test(pytest-coverage-comment) and Push Multi-OS
+# Workflow for testing the project across multiple operating systems and Python versions.
+# This workflow runs on main branch pushes, pull requests to main, and can be manually triggered.
+# It performs unit tests, generates coverage reports, and updates the README with the latest coverage data.
+
+name: Multi-OS Test
 
 on:
   workflow_dispatch:

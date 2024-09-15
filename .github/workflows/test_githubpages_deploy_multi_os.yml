@@ -1,4 +1,9 @@
-name: Test(pytest-html) and Deploy Multi-OS
+# Workflow for testing the project and deploying test results to GitHub Pages.
+# This workflow runs on all pushes (except to the coverage branch), pull requests, and can be manually triggered.
+# It performs tests across multiple operating systems, generates HTML reports, and deploys them to GitHub Pages.
+# After deployment, it sends a notification via LINE.
+
+name: Test and Deploy
 
 on:
   workflow_dispatch:

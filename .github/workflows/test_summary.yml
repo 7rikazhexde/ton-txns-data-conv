@@ -1,6 +1,8 @@
-# This workflow will install dependencies, create coverage tests and run Pytest Coverage Comment
-# For more information see: https://github.com/MishaKav/pytest-coverage-comment/
-name: Test(pytest-coverage-comment) Summary
+# Comprehensive testing workflow for multiple environments
+# This workflow runs tests across various OS and Python version combinations.
+# It generates coverage reports, posts summaries, and sends notifications.
+
+name: Test Suite
 
 on:
   workflow_dispatch:
