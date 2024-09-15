@@ -4,9 +4,19 @@ English | [日本語](README_ja.md)
 
 The TON Transactions data converter is a project aimed at retrieving and converting transaction data recorded on the TON blockchain.
 
+## Pytest Coverage Comment
+
+[![Test Summary](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml) [![Coverage Status](https://img.shields.io/badge/Coverage-check%20here-blue.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/tree/coverage)
+
+## pytest-html
+
+[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/ubuntu-latest/report_page.html) [![macos-12](https://img.shields.io/badge/macos_12-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/macos-12/report_page.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/windows-latest/report_page.html)
+
 ## Table of contents
 
 - [ton-txns-data-conv](#ton-txns-data-conv)
+  - [Pytest Coverage Comment](#pytest-coverage-comment)
+  - [pytest-html](#pytest-html)
   - [Table of contents](#table-of-contents)
   - [Usage](#usage)
     - [Install](#install)
@@ -17,6 +27,7 @@ The TON Transactions data converter is a project aimed at retrieving and convert
     - [Get all transaction information](#get-all-transaction-information)
     - [Creating custom files for cryptact](#creating-custom-files-for-cryptact)
     - [Visualize TON Whales Staking Amount History](#visualize-ton-whales-staking-amount-history)
+    - [Calculate the total amount of Toncoin held by the account](#calculate-the-total-amount-of-toncoin-held-by-the-account)
   - [Disclaimer](#disclaimer)
 
 ## Usage
@@ -76,12 +87,12 @@ This file contains settings for your `TON API key`[^1], TON address, and file sa
 Use `TON Index(API V3)` to retrieve transaction data associated with an address (`user_friendly_address`) for a specified period (`transaction_history_period`: default 365 days).
 
 ```bash
-python get_ton_txns_api.py
+python ton_txns_data_conv/account/get_ton_txns_api.py
 ```
 
 ### Creating custom files for cryptact
 
-[get_ton_transactions.py](./ton_txns_data_conv/get_ton_transactions.py) to create a custom file for Cryptact from the acquired transactions data.
+[create_ton_stkrwd_cryptact_custom.py](./ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py) to create a custom file for Cryptact from the acquired transactions data.
 
 > [!CAUTION]
 > - The CSV file is created in the custom file format for staking rewards in Cryptact. Refer to <https://support.cryptact.com/hc/en-us/articles/360002571312-Custom-File-for-any-other-trades#menu210> for more information on the custom file format.  
@@ -89,18 +100,20 @@ python get_ton_txns_api.py
 > - In the TON blockchain, there are no specific key/value pairs to distinguish between staking rewards and other transactions. Therefore, the CSV file may include transactions from other wallets that are not related to staking. Please manually remove any non-staking related data from the CSV file.  
 
 ```bash
-python create_ton_stkrwd_cryptact_custom.py
+python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 ```
 
 ### Visualize TON Whales Staking Amount History
 
-Use [ton_whales_staking_dashboard.py](./ton_txns_data_conv/ton_whales_staking_dashboard.py) to visualize and analyze the staking amount history for TON Whales.
+Use [ton_whales_staking_dashboard.py](./ton_txns_data_conv/staking/ton_whales_staking_dashboard.py) to visualize and analyze the staking amount history for TON Whales.
 
-![TON Whales Staking Amount History Dashboard](.other_data/TON%20Whales%20Staking%20Amount%20History.png)
-*Screenshot of the TON Whales Staking Amount History Dashboard*
+<div align="center">
+  <img src=".other_data/TON%20Whales%20Staking%20Amount%20History.png" alt="TON Whales Staking Amount History Dashboard" />
+  <p><em>Screenshot of the TON Whales Staking Amount History Dashboard</em></p>
+</div>
 
 ```bash
-python ton_whales_staking_dashboard.py
+python ton_txns_data_conv/staking/ton_whales_staking_dashboard.py
 ```
 
 This script creates a Dash web application that allows you to:
@@ -119,6 +132,21 @@ This script creates a Dash web application that allows you to:
 > - Use the "Go Staking Stats" button to open your TON Whales staking statistics in a new browser tab.
 > - Hover over the question mark icons (?) next to input fields for tooltips. These provide important information about how to use each field and how staking rewards are calculated.
 > - The "Staking Pool Member Address" field has a tooltip explaining how to find the correct address to use, including a link to the TON Whales Staking page that opens in a new tab.
+
+### Calculate the total amount of Toncoin held by the account
+
+Get the total amount of Toncoin held by the account and the rate price to calculate the total amount.
+
+```bash
+python ton_txns_data_conv/account/get_latest_ton_amount_calculation.py
+```
+
+- Use `TON API:(/v2/accounts/{account_id})` to get the Toncoin (`balance`) held by the account.
+- Use `TON API:(/v2/rates)` to get the rate of Toncoin against Ticker.
+- Use `TON-API-v4` to get the total amount of Toncoin in staking in a specified pool in staking.
+
+> [!NOTE]
+> The process for obtaining staking information is the same as for [Visualize TON Whales Staking Amount History](#visualize-ton-whales-staking-amount-history).
 
 ## Disclaimer
 

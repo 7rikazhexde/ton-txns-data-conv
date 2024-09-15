@@ -83,3 +83,6 @@ save_allow_stkrwd = true
 [cryptact_info]
 # The counter currency for staking rewards (e.g., "JPY" for Japanese Yen)
 counter = "JPY"
+
+[debug_info]
+enable_tracing = false

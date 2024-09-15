@@ -10,12 +10,10 @@ and allows users to save staking reward history.
 
 import asyncio
 import csv
-import os
 import sys
-import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import aiohttp
 import dash
@@ -25,62 +23,86 @@ from dash import Dash, dcc, html
 from dash.dependencies import Input, Output, State
 from pytoniq_core import Address
 from pytoniq_core.boc.address import AddressError
-from tomlkit.toml_file import TOMLFile
 
-# Load configuration
-script_dir = os.path.dirname(os.path.abspath(__file__))
-config_file_path = os.path.join(script_dir, "config.toml")
+project_root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(project_root))
 
-if not os.path.exists(config_file_path):
-    print(f"Error: Configuration file not found at {config_file_path}.")
-    sys.exit(1)
 
-try:
-    toml_config = TOMLFile(config_file_path)
-    config = toml_config.read()
-except Exception as e:
-    print(f"Error: Failed to read configuration file. {str(e)}")
-    sys.exit(1)
+config_values: Dict[str, Any] = {}
 
-# TON Address Info
-DEFAULT_UF_ADDRESS = config.get("ton_info", {}).get("user_friendly_address", "")
 
-if not DEFAULT_UF_ADDRESS:
-    print("Error: Please set 'user_friendly_address' in the config.toml file.")
-    sys.exit(1)
+def initialize_config() -> Dict[str, Any]:
+    global config_values
+    from ton_txns_data_conv.utils.config_loader import load_config
 
-try:
-    address = Address(DEFAULT_UF_ADDRESS)
-    BASIC_WORKCHAIN_ADDRESS = address.to_str(
-        is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-    )
-except AddressError as e:
-    print(f"Error: Invalid user_friendly_address. {str(e)}")
-    sys.exit(1)
-except Exception as e:
-    print(f"Error: An unexpected error occurred while creating the address. {str(e)}")
-    sys.exit(1)
+    config = load_config()
 
-BASIC_WORKCHAIN_ADDRESS = address.to_str(
-    is_user_friendly=True, is_bounceable=True, is_url_safe=True, is_test_only=False
-)
-# Ref: https://docs.ton.org/develop/dapps/cookbook#what-flags-are-there-in-user-friendly-addresses
+    def get_address(user_friendly_address: str) -> str:
+        if not user_friendly_address:
+            raise ValueError(
+                "Please set 'user_friendly_address' in the config.toml file."
+            )
 
-DEFAULT_POOL_ADDRESS = config.get("ton_info", {}).get("pool_address", "")
-DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
-    "get_member_use_address", ""
-)
+        try:
+            address = Address(user_friendly_address)
+            return cast(
+                str,
+                address.to_str(
+                    is_user_friendly=True,
+                    is_bounceable=True,
+                    is_url_safe=True,
+                    is_test_only=False,
+                ),
+            )
+        except AddressError as e:
+            raise ValueError(f"Invalid user_friendly_address: {str(e)}")
+        except Exception as e:
+            raise RuntimeError(
+                f"An unexpected error occurred while creating the address: {str(e)}"
+            )
 
-# Initialize default values
-DEFAULT_STAKING_CALC_ADJUST_VALUE = config.get("staking_info", {}).get(
-    "staking_calculation_adjustment_value", 0.1
-)
-DEFAULT_LOCAL_TIMEZONE = config.get("staking_info", {}).get("local_timezone", 0.1)
-DEFAULT_COUNTER_VAL = config.get("cryptact_info", {}).get("counter", "")
-TZ = timezone(timedelta(hours=DEFAULT_LOCAL_TIMEZONE))
+    try:
+        default_local_timezone = config.get("staking_info", {}).get(
+            "local_timezone", 0.1
+        )
+        return {
+            "BASIC_WORKCHAIN_ADDRESS": get_address(
+                config.get("ton_info", {}).get("user_friendly_address", "")
+            ),
+            "DEFAULT_POOL_ADDRESS": config.get("ton_info", {}).get("pool_address", ""),
+            "DEFAULT_GET_MEMBER_USER_ADDRESS": config.get("ton_info", {}).get(
+                "get_member_use_address", ""
+            ),
+            "DEFAULT_STAKING_CALC_ADJUST_VALUE": config.get("staking_info", {}).get(
+                "staking_calculation_adjustment_value", 0.1
+            ),
+            "DEFAULT_LOCAL_TIMEZONE": default_local_timezone,
+            "DEFAULT_COUNTER_VAL": config.get("cryptact_info", {}).get("counter", ""),
+            "TZ": timezone(timedelta(hours=default_local_timezone)),
+            "SAVE_ALLOW_STKRWD": config.get("file_save_option", {}).get(
+                "save_allow_stkrwd", False
+            ),
+        }
+    except (ValueError, RuntimeError) as e:
+        print(f"Error during initialization: {str(e)}")
+        sys.exit(1)
 
-# Save Option
-SAVE_ALLOW_STKRWD = config.get("file_save_option", {}).get("save_allow_stkrwd", False)
+
+# Initialize config_values only at main runtime
+if __name__ == "__main__":
+    config_values = initialize_config()
+else:
+    # Default value when testing or importing
+    config_values = {
+        "BASIC_WORKCHAIN_ADDRESS": "",
+        "DEFAULT_POOL_ADDRESS": "",
+        "DEFAULT_GET_MEMBER_USER_ADDRESS": "",
+        "DEFAULT_STAKING_CALC_ADJUST_VALUE": 0.1,
+        "DEFAULT_LOCAL_TIMEZONE": 0,
+        "DEFAULT_COUNTER_VAL": "",
+        "TZ": timezone.utc,
+        "SAVE_ALLOW_STKRWD": False,
+    }
 
 
 async def get_latest_block(session: aiohttp.ClientSession) -> Tuple[int, datetime]:
@@ -93,11 +115,12 @@ async def get_latest_block(session: aiohttp.ClientSession) -> Tuple[int, datetim
     Returns:
         Tuple[int, datetime]: The sequence number of the latest block and its timestamp.
     """
-    async with session.get("https://mainnet-v4.tonhubapi.com/block/latest") as response:
+    response = await session.get("https://mainnet-v4.tonhubapi.com/block/latest")
+    async with response:
         data = await response.json()
-        return data["last"]["seqno"], datetime.fromtimestamp(
-            data["now"], tz=timezone.utc
-        )
+        seqno = data["last"]["seqno"]
+        ts_utc = datetime.fromtimestamp(data["now"], tz=timezone.utc)
+    return seqno, ts_utc
 
 
 async def get_block_by_unix_time(
@@ -114,9 +137,10 @@ async def get_block_by_unix_time(
         Tuple[Optional[int], Optional[datetime]]: The sequence number and timestamp of the block,
         or (None, None) if the block doesn't exist.
     """
-    async with session.get(
+    response = await session.get(
         f"https://mainnet-v4.tonhubapi.com/block/utime/{int(unix_time)}"
-    ) as response:
+    )
+    async with response:
         data = await response.json()
         if data["exist"]:
             shard_data = data["block"]["shards"][0]
@@ -149,13 +173,12 @@ async def get_staking_info(
         or None if the information couldn't be retrieved.
     """
     url = f"https://mainnet-v4.tonhubapi.com/block/{seqno}/{pool_address}/run/get_member/{get_member_user_address}"
-    async with session.get(url) as response:
+    response = await session.get(url)
+    async with response:
         data = await response.json()
         if "result" in data and len(data["result"]) >= 4:
             return {
-                # UTC Time: 2024-07-15 08:00:00+00:00
-                # JST Time: 2024-07-15 17:00:00+09:00
-                "Timestamp": timestamp.astimezone(TZ),
+                "Timestamp": timestamp.astimezone(config_values["TZ"]),
                 "Seqno": seqno,
                 "Staked Amount": int(data["result"][0]["value"]) / 1e9,
                 "Pending Deposit": int(data["result"][1]["value"]) / 1e9,
@@ -257,7 +280,7 @@ def calculate_staking_rewards(df: pd.DataFrame, adjust_val: float) -> pd.DataFra
                     "Base": "TON",
                     "Volume": difference,
                     "Price": "",
-                    "Counter": DEFAULT_COUNTER_VAL,
+                    "Counter": config_values["DEFAULT_COUNTER_VAL"],
                     "Fee": 0,
                     "FeeCcy": "TON",
                     "Comment": f"Seqno Segment:{df.iloc[i-1]['Seqno']} - {df.iloc[i]['Seqno']}",
@@ -268,7 +291,8 @@ def calculate_staking_rewards(df: pd.DataFrame, adjust_val: float) -> pd.DataFra
 
 
 # Initialize Dash app
-app = Dash(__name__, assets_folder="assets")
+assets_folder_path = project_root / "ton_txns_data_conv" / "assets"
+app = Dash(__name__, assets_folder=assets_folder_path)
 app.title = "TON Whales Staking Amount History"
 
 app.clientside_callback(
@@ -364,7 +388,7 @@ def create_layout() -> html.Div:
                     dcc.Input(
                         id="pool-address-input",
                         type="text",
-                        value=DEFAULT_POOL_ADDRESS,
+                        value=config_values["DEFAULT_POOL_ADDRESS"],
                         className="input full-width",
                     ),
                 ],
@@ -379,7 +403,7 @@ def create_layout() -> html.Div:
                             dcc.Input(
                                 id="get-member-user-address-input",
                                 type="text",
-                                value=DEFAULT_GET_MEMBER_USER_ADDRESS,
+                                value=config_values["DEFAULT_GET_MEMBER_USER_ADDRESS"],
                                 className="input full-width",
                             ),
                             html.Span(
@@ -446,7 +470,9 @@ def create_layout() -> html.Div:
                                     dcc.Input(
                                         id="adjust-val-input",
                                         type="number",
-                                        value=DEFAULT_STAKING_CALC_ADJUST_VALUE,
+                                        value=config_values[
+                                            "DEFAULT_STAKING_CALC_ADJUST_VALUE"
+                                        ],
                                         className="input small-input",
                                     ),
                                     html.Span(
@@ -488,7 +514,7 @@ def create_layout() -> html.Div:
                                 min=0,
                                 max=23,
                                 step=1,
-                                value=DEFAULT_LOCAL_TIMEZONE,
+                                value=config_values["DEFAULT_LOCAL_TIMEZONE"],
                                 className="input small-input",
                             ),
                         ],
@@ -499,8 +525,9 @@ def create_layout() -> html.Div:
                             html.Label("Date Range:", className="label"),
                             dcc.DatePickerRange(
                                 id="date-picker-range",
-                                start_date=datetime.now(TZ).date() - timedelta(days=30),
-                                end_date=datetime.now(TZ).date(),
+                                start_date=datetime.now(config_values["TZ"]).date()
+                                - timedelta(days=30),
+                                end_date=datetime.now(config_values["TZ"]).date(),
                                 display_format="YYYY-MM-DD",
                                 className="date-picker",
                             ),
@@ -614,8 +641,12 @@ def fetch_data(
         return dash.no_update, dash.no_update
 
     try:
-        start_datetime = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=TZ)
-        end_datetime = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=TZ)
+        start_datetime = datetime.strptime(start_date, "%Y-%m-%d").replace(
+            tzinfo=config_values["TZ"]
+        )
+        end_datetime = datetime.strptime(end_date, "%Y-%m-%d").replace(
+            tzinfo=config_values["TZ"]
+        )
         hour = int(hour)
         if hour < 0 or hour > 23:
             raise ValueError("Hour must be between 0 and 23")
@@ -648,11 +679,11 @@ def fetch_data(
 
         message = f"Data fetched successfully. {len(df)} records retrieved."
 
-        if SAVE_ALLOW_STKRWD:
+        if config_values["SAVE_ALLOW_STKRWD"]:
             try:
                 d_today = datetime.today().date()
                 num = len(df)
-                output_dir = Path(__file__).parent / "output"
+                output_dir = project_root / "ton_txns_data_conv" / "output"
                 output_dir.mkdir(exist_ok=True)
                 csv_file_path = (
                     output_dir
@@ -679,25 +710,51 @@ def fetch_data(
 
 
 @app.callback(
-    Output("output-message", "children", allow_duplicate=True),
+    Output("dummy-output", "children", allow_duplicate=True),
     Input("go-staking-stats-button", "n_clicks"),
     prevent_initial_call=True,
 )
 def open_staking_stats(n_clicks: Optional[int]) -> str:
     """
-    Open TON Whales Staking Stats page in a new browser tab.
+    Open the TON Whales Staking Stats page in a new browser tab.
+
+    This function is triggered when the "Go Staking Stats" button is clicked.
+    It generates a JavaScript command to open the TON Whales Staking Stats page
+    for the specified TON address in a new tab.
 
     Args:
-        n_clicks (Optional[int]): Number of times the button was clicked.
+        n_clicks (Optional[int]): The number of times the button has been clicked.
+                                  This is automatically provided by Dash.
 
     Returns:
-        str: Status message.
+        str:
+            - A string containing a JavaScript command to open a new tab if the button was clicked.
+            - A string indicating no action was taken if the function was called without a button click
+              (e.g., on initial load).
+
+    Note:
+        The function uses the BASIC_WORKCHAIN_ADDRESS global variable to construct the URL.
+        This address should be set elsewhere in the application.
     """
     if n_clicks is not None:
-        url = f"https://tonwhales.com/staking/address/{BASIC_WORKCHAIN_ADDRESS}"
-        webbrowser.open(url)
-        return "Opened TON Whales Staking Stats page in a new browser tab."
+        url = f"https://tonwhales.com/staking/address/{config_values['BASIC_WORKCHAIN_ADDRESS']}"
+        return f"window.open('{url}', '_blank')"
     return "No action taken."
+
+
+# Client-side callbacks
+app.clientside_callback(
+    """
+    function(children) {
+        if (children) {
+            eval(children);
+        }
+        return '';
+    }
+    """,
+    Output("dummy-output", "children"),
+    Input("dummy-output", "children"),
+)
 
 
 @app.callback(
@@ -809,7 +866,7 @@ def generate_reward_history(
     d_today = datetime.today().date()
     num = len(reward_df)
 
-    output_dir = Path(__file__).parent / "output"
+    output_dir = project_root / "ton_txns_data_conv" / "output"
     output_dir.mkdir(exist_ok=True)
 
     filename = f"staking_history_{start_date}_to_{end_date}_adj{adjust_val}_N{num}_{d_today}.csv"
@@ -863,7 +920,7 @@ def handle_overwrite_confirmation(
     d_today = datetime.today().date()
     num = len(reward_df)
 
-    output_dir = Path(__file__).parent / "output"
+    output_dir = project_root / "ton_txns_data_conv" / "output"
     output_dir.mkdir(exist_ok=True)
 
     filename = f"staking_history_{start_date}_to_{end_date}_adj{adjust_val}_N{num}_{d_today}.csv"
@@ -875,5 +932,6 @@ def handle_overwrite_confirmation(
     return f"Staking compensation history is saved in {csv_file_path}."
 
 
-if __name__ == "__main__":
-    app.run_server(debug=True)
+if __name__ == "__main__":  # pragma: no cover
+    # To allow access from other computers on the local network
+    app.run(debug=True, host="0.0.0.0", port=8050)
