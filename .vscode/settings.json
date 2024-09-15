@@ -1,5 +1,17 @@
 {
     "files.exclude": {
         "**/.git": false
-    }
+    },
+    "[python]": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit" // コード保存時にimport行を整理
+        },
+        "editor.defaultFormatter": "charliermarsh.ruff", // FormatterにRuffを使用
+        "editor.formatOnSave": true // コード保存時にフォーマットを実行
+    },
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.terminal.activateEnvironment": true
 }
