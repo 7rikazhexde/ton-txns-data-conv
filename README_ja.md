@@ -4,9 +4,19 @@
 
 TON トランザクションデータコンバーターは、TONブロックチェーンに記録されたトランザクションデータを取得し変換することを目的としたプロジェクトです。
 
+## Pytest Coverage Comment
+
+[![Test Summary](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml) [![Coverage Status](https://img.shields.io/badge/Coverage-check%20here-blue.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/tree/coverage)
+
+## pytest-html
+
+[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/ubuntu-latest/report_page.html) [![macos-12](https://img.shields.io/badge/macos_12-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/macos-12/report_page.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/windows-latest/report_page.html)
+
 ## 目次
 
 - [ton-txns-data-conv](#ton-txns-data-conv)
+  - [Pytest Coverage Comment](#pytest-coverage-comment)
+  - [pytest-html](#pytest-html)
   - [目次](#目次)
   - [使用方法](#使用方法)
     - [インストール](#インストール)
@@ -17,6 +27,7 @@ TON トランザクションデータコンバーターは、TONブロックチ�
     - [全トランザクション情報の取得](#全トランザクション情報の取得)
     - [cryptact用カスタムファイルの作成](#cryptact用カスタムファイルの作成)
     - [TON Whalesのステーキング報酬履歴の可視化](#ton-whalesのステーキング報酬履歴の可視化)
+    - [アカウントが保有するToncoinの総額を計算する](#アカウントが保有するtoncoinの総額を計算する)
   - [免責事項](#免責事項)
 
 ## 使用方法
@@ -76,12 +87,12 @@ pip install -r requirements.txt requirements-dev.txt
 `TON Index(API V3)`を使用して、アドレス(`user_friendly_address`)に関連する取引データを指定された期間分(`transaction_history_period`:デフォルト365日)取得する
 
 ```bash
-python get_ton_txns_api.py
+python ton_txns_data_conv/account/get_ton_txns_api.py
 ```
 
 ### cryptact用カスタムファイルの作成
 
-[get_ton_transactions.py](./ton_txns_data_conv/get_ton_transactions.py)を使用して、取得したトランザクションデータからCryptact用のカスタムファイルを作成します。
+[create_ton_stkrwd_cryptact_custom.py](./ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py)を使用して、取得したトランザクションデータからCryptact用のカスタムファイルを作成します。
 
 > [!CAUTION]
 > - CSVファイルは、Cryptactのステーキング報酬用カスタムファイル形式で作成されます。カスタムファイル形式の詳細については、<https://support.cryptact.com/hc/ja/articles/360002571312-%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%A0%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E4%BD%9C%E6%88%90%E6%96%B9%E6%B3%95#h_01GXMK12D426VV4S6GAJHV9T2B> を参照してください。
@@ -89,18 +100,20 @@ python get_ton_txns_api.py
 > - TONブロックチェーンでは、ステーキング報酬と他のトランザクションを区別するための特定のキー/値ペアがありません。そのため、CSVファイルにはステーキングに関連しない他のウォレットからのトランザクションが含まれる可能性があります。CSVファイルからステーキングに関連しないデータを手動で削除してください。
 
 ```bash
-python create_ton_stkrwd_cryptact_custom.py
+python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 ```
 
 ### TON Whalesのステーキング報酬履歴の可視化
 
-[ton_whales_staking_dashboard.py](./ton_txns_data_conv/ton_whales_staking_dashboard.py)を使用して、TON Whalesのステーキング報酬履歴を可視化・分析します。
+[ton_whales_staking_dashboard.py](./ton_txns_data_conv/staking/ton_whales_staking_dashboard.py)を使用して、TON Whalesのステーキング報酬履歴を可視化・分析します。
 
-![TON Whalesステーキング報酬履歴ダッシュボード](.other_data/TON%20Whales%20Staking%20Amount%20History.png)
-*TON Whalesステーキング報酬履歴ダッシュボードのスクリーンショット*
+<div align="center">
+  <img src=".other_data/TON%20Whales%20Staking%20Amount%20History.png" alt="TON Whalesステーキング報酬履歴ダッシュボード" />
+  <p><em>TON Whalesステーキング報酬履歴ダッシュボードのスクリーンショット</em></p>
+</div>
 
 ```bash
-python ton_whales_staking_dashboard.py
+python ton_txns_data_conv/staking/ton_whales_staking_dashboard.py
 ```
 
 このスクリプトは以下の機能を持つDashウェブアプリケーションを作成します：
@@ -119,6 +132,21 @@ python ton_whales_staking_dashboard.py
 > - "Go Staking Stats"ボタンを使用して、新しいブラウザタブでTON Whalesのステーキング統計を開くことができます。
 > - 入力フィールドの隣にある疑問符アイコン（?）にカーソルを合わせると、ツールチップが表示されます。これらは各フィールドの使用方法とステーキング報酬の計算方法に関する重要な情報を提供します。
 > - "Staking Pool Member Address"フィールドには、正しいアドレスの見つけ方を説明するツールチップがあり、新しいタブで開くTON Whalesステーキングページへのリンクも含まれています。
+
+### アカウントが保有するToncoinの総額を計算する
+
+アカウントが保有するトンコインの総量とレート価格を取得して総額を計算します。
+
+```bash
+python ton_txns_data_conv/account/get_latest_ton_amount_calculation.py
+```
+
+- `TON API:(/v2/accounts/{account_id})`を使用してアカウントが保有するToncoin(`balance`)を取得します。
+- `TON API:(/v2/rates)`をTickerに対するToncoinのレートを取得します。
+- `ton-api-v4`を使用してステーキングで指定プールでステーキング中のToncoinの総量を取得します。
+
+> [!NOTE]
+> ステーキング情報の取得処理は[TON Whalesのステーキング報酬履歴の可視化](#ton-whalesのステーキング報酬履歴の可視化)と同様です。
 
 ## 免責事項
 

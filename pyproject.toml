@@ -5,10 +5,13 @@ description = "The TON Transactions data converter is a project aimed at retriev
 authors = ["7rikazhexde"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "ton_txns_data_conv" },
+]
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 pytonapi = "^0.3.1"
 pandas = "^2.2.2"
 tomlkit = "^0.12.5"
@@ -18,6 +21,10 @@ aiohttp = "^3.9.5"
 types-requests = "^2.32.0.20240622"
 dash-bootstrap-components = "^1.6.0"
 pytoniq-core = "^0.1.36"
+babel = "^2.16.0"
+httpx = "^0.27.0"
+python-dotenv = "^1.0.1"
+freezegun = "^1.5.1"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -29,10 +36,20 @@ pytest = "^8.2.2"
 pytest-xdist = "^3.6.1"
 pytest-cov = "^5.0.0"
 pytest-mock = "^3.14.0"
+pytest-asyncio = "^0.23.8"
+dash = {extras = ["testing"], version = "^2.17.1"}
+multiprocess = "^0.70.16"
+pytest-html = "^4.1.1"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.taskipy.tasks]
+tdctest1 = "pytest -s -vv --cov=. --cov-branch --cov-report term-missing --cov-report html"
+tdctest2 = "pytest --html=htmlcov/report_page.html"
+test_gh_action_xml = "python scripts/run_tests.py --report xml"
+test_gh_action_term = "python scripts/run_tests.py --report term"
 
 [tool.ruff]
 # Check Rules
@@ -86,3 +103,27 @@ warn_return_any = true
 warn_unused_ignores = true
 # Warning for redundant casts
 warn_redundant_casts = true
+
+[tool.pytest.ini_options]
+testpaths = ["ton_txns_data_conv", "tests"]
+pythonpath = ["."]
+addopts = "--cov=ton_txns_data_conv --cov-report=term-missing --cov-report=html"
+
+[tool.coverage.run]
+source = ["ton_txns_data_conv"]
+omit = ["ton_txns_data_conv/staking/ton_whales_staking_dashboard.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "except ImportError:",
+    "def main"
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
