@@ -3,7 +3,7 @@
 
 > [!Note]
 > 
-> Commit: [080b0636](https://github.com/7rikazhexde/ton-txns-data-conv/tree/080b0636)
+> Commit: [aba59c42](https://github.com/7rikazhexde/ton-txns-data-conv/tree/aba59c42)
 
 > [!Important]
 > The following file is intentionally excluded from test coverage:
@@ -17,7 +17,7 @@
 ## Pytest Result Summary (os: macos-12 / python-version: 3.11)
 | Tests | Skipped | Failures | Errors | Time |
 | ----- | ------- | -------- | -------- | ------------------ |
-| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 7.522s :stopwatch: |
+| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 7.290s :stopwatch: |
 
 
 ## Coverage Report (os: macos-12 / python-version: 3.12)
@@ -26,7 +26,7 @@
 ## Pytest Result Summary (os: macos-12 / python-version: 3.12)
 | Tests | Skipped | Failures | Errors | Time |
 | ----- | ------- | -------- | -------- | ------------------ |
-| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 10.149s :stopwatch: |
+| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 9.011s :stopwatch: |
 
 
 ## Coverage Report (os: ubuntu-latest / python-version: 3.11)
@@ -35,7 +35,7 @@
 ## Pytest Result Summary (os: ubuntu-latest / python-version: 3.11)
 | Tests | Skipped | Failures | Errors | Time |
 | ----- | ------- | -------- | -------- | ------------------ |
-| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 6.509s :stopwatch: |
+| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 4.976s :stopwatch: |
 
 
 ## Coverage Report (os: ubuntu-latest / python-version: 3.12)
@@ -44,7 +44,7 @@
 ## Pytest Result Summary (os: ubuntu-latest / python-version: 3.12)
 | Tests | Skipped | Failures | Errors | Time |
 | ----- | ------- | -------- | -------- | ------------------ |
-| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 7.454s :stopwatch: |
+| 101 | 0 :zzz: | 0 :x: | 0 :fire: | 7.391s :stopwatch: |
 
 
 ## Coverage Report (os: windows-latest / python-version: 3.11)
@@ -53,7 +53,7 @@
 ## Pytest Result Summary (os: windows-latest / python-version: 3.11)
 | Tests | Skipped | Failures | Errors | Time |
 | ----- | ------- | -------- | -------- | ------------------ |
-| 101 | 0 :zzz: | 1 :x: | 0 :fire: | 8.709s :stopwatch: |
+| 101 | 0 :zzz: | 1 :x: | 0 :fire: | 8.865s :stopwatch: |
 
 
 ## Coverage Report (os: windows-latest / python-version: 3.12)
@@ -62,6 +62,6 @@
 ## Pytest Result Summary (os: windows-latest / python-version: 3.12)
 | Tests | Skipped | Failures | Errors | Time |
 | ----- | ------- | -------- | -------- | ------------------ |
-| 101 | 0 :zzz: | 1 :x: | 0 :fire: | 10.785s :stopwatch: |
+| 101 | 0 :zzz: | 1 :x: | 0 :fire: | 9.899s :stopwatch: |
 
 
