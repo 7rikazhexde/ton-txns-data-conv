@@ -4,9 +4,19 @@
 
 TON トランザクションデータコンバーターは、TONブロックチェーンに記録されたトランザクションデータを取得し変換することを目的としたプロジェクトです。
 
+## Pytest Coverage Comment
+
+[![Test Summary](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml) [![Coverage Status](https://img.shields.io/badge/Coverage-check%20here-blue.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/tree/coverage)
+
+## pytest-html
+
+[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/ubuntu-latest/report_page.html) [![macos-12](https://img.shields.io/badge/macos_12-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/macos-12/report_page.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/windows-latest/report_page.html)
+
 ## 目次
 
 - [ton-txns-data-conv](#ton-txns-data-conv)
+  - [Pytest Coverage Comment](#pytest-coverage-comment)
+  - [pytest-html](#pytest-html)
   - [目次](#目次)
   - [使用方法](#使用方法)
     - [インストール](#インストール)
@@ -97,8 +107,10 @@ python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 
 [ton_whales_staking_dashboard.py](./ton_txns_data_conv/staking/ton_whales_staking_dashboard.py)を使用して、TON Whalesのステーキング報酬履歴を可視化・分析します。
 
-![TON Whalesステーキング報酬履歴ダッシュボード](.other_data/TON%20Whales%20Staking%20Amount%20History.png)
-*TON Whalesステーキング報酬履歴ダッシュボードのスクリーンショット*
+<div align="center">
+  <img src=".other_data/TON%20Whales%20Staking%20Amount%20History.png" alt="TON Whalesステーキング報酬履歴ダッシュボード" />
+  <p><em>TON Whalesステーキング報酬履歴ダッシュボードのスクリーンショット</em></p>
+</div>
 
 ```bash
 python ton_txns_data_conv/staking/ton_whales_staking_dashboard.py

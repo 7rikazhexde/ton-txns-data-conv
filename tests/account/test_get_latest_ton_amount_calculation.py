@@ -1,3 +1,4 @@
+import importlib
 from datetime import datetime, timezone
 from typing import Any, Dict
 
@@ -211,6 +212,65 @@ async def test_get_ton_balance(mocker: MockerFixture) -> None:
 
     result = await glta.get_ton_balance(mock_client, "test_user_friendly_address")
     assert result == 1.5
+
+
+# def test_get_currency_symbol_success(mocker):
+#    """
+#    get_currency_symbolが正常に動作する場合のテスト
+#    """
+#    mocker.patch(
+#        "ton_txns_data_conv.account.get_latest_ton_amount_calculation.DEFAULT_COUNTER_VAL", "USD"
+#    )
+#    mocker.patch(
+#        "ton_txns_data_conv.account.get_latest_ton_amount_calculation.get_currency_symbol",
+#        return_value="$",
+#    )
+#    mocker.patch(
+#        "ton_txns_data_conv.account.get_latest_ton_amount_calculation.Locale",
+#        return_value=Locale("en_US"),
+#    )
+#
+#    # symbolを直接再評価
+#    symbol = glta.get_currency_symbol(
+#        glta.DEFAULT_COUNTER_VAL, locale=glta.Locale("en_US")
+#    )
+#    assert symbol == "$"
+
+
+def test_get_currency_symbol_exception_handling(mocker: MockerFixture) -> None:
+    """
+    get_currency_symbolが例外を発生させた場合のテスト
+    """
+    # モジュールレベルの変数をパッチ
+    mocker.patch.object(glta, "DEFAULT_COUNTER_VAL", "INVALID")
+
+    # get_currency_symbolをモックして例外を発生させる
+    mock_get_currency_symbol = mocker.patch("babel.numbers.get_currency_symbol")
+    mock_get_currency_symbol.side_effect = ValueError()
+
+    # モジュールを再読み込みして、パッチされた値を反映
+    importlib.reload(glta)
+
+    # symbolの値を確認
+    assert glta.symbol == "¥"
+
+    # TypeErrorの場合もテスト
+    mock_get_currency_symbol.side_effect = TypeError()
+    importlib.reload(glta)
+    assert glta.symbol == "¥"
+
+
+# def test_get_currency_symbol_jpy(mocker):
+#    """
+#    日本円の通貨記号を取得する場合のテスト
+#    """
+#    mocker.patch('ton_txns_data_conv.account.get_latest_ton_amount_calculation.DEFAULT_COUNTER_VAL', 'JPY')
+#    mocker.patch('ton_txns_data_conv.account.get_latest_ton_amount_calculation.get_currency_symbol', return_value='￥')
+#    mocker.patch('ton_txns_data_conv.account.get_latest_ton_amount_calculation.Locale', return_value=Locale('ja_JP'))
+#
+#    # symbolを直接再評価
+#    symbol = glta.get_currency_symbol(glta.DEFAULT_COUNTER_VAL, locale=glta.Locale("ja_JP"))
+#    assert symbol in ['¥', '￥']  # 半角または全角の円記号を許容
 
 
 @pytest.mark.asyncio

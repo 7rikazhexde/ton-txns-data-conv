@@ -4,9 +4,19 @@ English | [日本語](README_ja.md)
 
 The TON Transactions data converter is a project aimed at retrieving and converting transaction data recorded on the TON blockchain.
 
+## Pytest Coverage Comment
+
+[![Test Summary](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml) [![Coverage Status](https://img.shields.io/badge/Coverage-check%20here-blue.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/tree/coverage)
+
+## pytest-html
+
+[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/ubuntu-latest/report_page.html) [![macos-12](https://img.shields.io/badge/macos_12-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/macos-12/report_page.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/windows-latest/report_page.html)
+
 ## Table of contents
 
 - [ton-txns-data-conv](#ton-txns-data-conv)
+  - [Pytest Coverage Comment](#pytest-coverage-comment)
+  - [pytest-html](#pytest-html)
   - [Table of contents](#table-of-contents)
   - [Usage](#usage)
     - [Install](#install)
@@ -97,8 +107,10 @@ python ton_txns_data_conv/staking/create_ton_stkrwd_cryptact_custom.py
 
 Use [ton_whales_staking_dashboard.py](./ton_txns_data_conv/staking/ton_whales_staking_dashboard.py) to visualize and analyze the staking amount history for TON Whales.
 
-![TON Whales Staking Amount History Dashboard](.other_data/TON%20Whales%20Staking%20Amount%20History.png)
-*Screenshot of the TON Whales Staking Amount History Dashboard*
+<div align="center">
+  <img src=".other_data/TON%20Whales%20Staking%20Amount%20History.png" alt="TON Whales Staking Amount History Dashboard" />
+  <p><em>Screenshot of the TON Whales Staking Amount History Dashboard</em></p>
+</div>
 
 ```bash
 python ton_txns_data_conv/staking/ton_whales_staking_dashboard.py

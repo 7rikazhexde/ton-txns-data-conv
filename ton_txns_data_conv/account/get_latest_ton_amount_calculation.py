@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, cast
 
 import httpx
+from babel import Locale
 from babel.numbers import get_currency_symbol
 from pytoniq_core import Address
 from pytoniq_core.boc.address import AddressError
@@ -45,10 +46,13 @@ DEFAULT_GET_MEMBER_USER_ADDRESS = config.get("ton_info", {}).get(
     "get_member_use_address", ""
 )
 DEFAULT_LOCAL_TIMEZONE = config.get("staking_info", {}).get("local_timezone", 9)
-DEFAULT_COUNTER_VAL = config.get("cryptact_info", {}).get("counter", "")
+DEFAULT_COUNTER_VAL = config.get("cryptact_info", {}).get("counter", "JPY")
 TZ = timezone(timedelta(hours=DEFAULT_LOCAL_TIMEZONE))
 
-symbol = get_currency_symbol(DEFAULT_COUNTER_VAL)
+try:
+    symbol = get_currency_symbol(DEFAULT_COUNTER_VAL, locale=Locale("ja_JP"))
+except (ValueError, TypeError):
+    symbol = "¥"
 
 BASE_URL_TONHUB = "https://mainnet-v4.tonhubapi.com"
 BASE_URL_TONAPI = "https://tonapi.io/v2"

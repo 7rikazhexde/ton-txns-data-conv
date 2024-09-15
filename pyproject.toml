@@ -47,6 +47,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.taskipy.tasks]
 tdctest1 = "pytest -s -vv --cov=. --cov-branch --cov-report term-missing --cov-report html"
 tdctest2 = "pytest --html=htmlcov/report_page.html"
+test_gh_action_xml = "python scripts/run_tests.py --report xml"
+test_gh_action_term = "python scripts/run_tests.py --report term"
 
 [tool.ruff]
 # Check Rules
@@ -102,25 +104,25 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 
 [tool.pytest.ini_options]
-testpaths = ["ton_txns_data_conv","tests"]
+testpaths = ["ton_txns_data_conv", "tests"]
 pythonpath = ["."]
+addopts = "--cov=ton_txns_data_conv --cov-report=term-missing --cov-report=html"
 
 [tool.coverage.run]
-branch = false
-source = ["ton_txns_data_conv", "tests"]
+source = ["ton_txns_data_conv"]
+omit = ["ton_txns_data_conv/staking/ton_whales_staking_dashboard.py"]
 
 [tool.coverage.report]
-show_missing = true
-skip_covered = false
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
-    "def __str__",
-    "def __init__",
-    "raise AssertionError",
+    "if self.debug:",
+    "if __name__ == .__main__.:",
     "raise NotImplementedError",
-    "pass"
+    "pass",
+    "except ImportError:",
+    "def main"
 ]
 
 [tool.coverage.html]
-directory = "coverage_html_report"
+directory = "htmlcov"

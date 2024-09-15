@@ -4,7 +4,7 @@ from typing import Any, Dict
 from tomlkit import TOMLDocument, parse
 
 
-def find_config_file(file_name: str = "config.toml") -> Path:
+def find_config_file(file_name: str = "config_ps.toml") -> Path:
     current_dir = Path(__file__).resolve().parent
     while current_dir != current_dir.parent:
         config_path = current_dir / file_name

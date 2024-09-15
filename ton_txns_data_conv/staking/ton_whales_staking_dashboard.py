@@ -737,7 +737,7 @@ def open_staking_stats(n_clicks: Optional[int]) -> str:
         This address should be set elsewhere in the application.
     """
     if n_clicks is not None:
-        url = f"https://tonwhales.com/staking/address/{config_values["BASIC_WORKCHAIN_ADDRESS"]}"
+        url = f"https://tonwhales.com/staking/address/{config_values['BASIC_WORKCHAIN_ADDRESS']}"
         return f"window.open('{url}', '_blank')"
     return "No action taken."
 
