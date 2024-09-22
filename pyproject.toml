@@ -29,7 +29,7 @@ freezegun = "^1.5.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.7.1"
-ruff = "^0.4.9"
+ruff = "^0.6.7"
 mypy = "^1.10.0"
 taskipy = "^1.12.2"
 pytest = "^8.2.2"
@@ -40,6 +40,7 @@ pytest-asyncio = "^0.23.8"
 dash = {extras = ["testing"], version = "^2.17.1"}
 multiprocess = "^0.70.16"
 pytest-html = "^4.1.1"
+types-pytz = "^2024.2.0.20240913"
 
 [build-system]
 requires = ["poetry-core"]
@@ -52,10 +53,6 @@ test_gh_action_xml = "python scripts/run_tests.py --report xml"
 test_gh_action_term = "python scripts/run_tests.py --report term"
 
 [tool.ruff]
-# Check Rules
-lint.select = ["E", "F", "I"]
-# Ignore Error
-lint.ignore = ["E402","E501"]
 # Exclude a variety of commonly ignored directories.
 exclude = [
     ".bzr",
@@ -80,10 +77,15 @@ exclude = [
     "node_modules",
     "venv",
 ]
-lint.per-file-ignores= {}
-
 # Assume Python 3.10.
 target-version = "py310"
+
+[tool.ruff.lint]
+# Check Rules
+select = ["E", "F", "I"]
+# Ignore Error
+ignore = ["E402", "E501"]
+per-file-ignores = {}
 
 [tool.mypy]
 files = ["ton_txns_data_conv"]
@@ -104,6 +106,10 @@ warn_unused_ignores = true
 # Warning for redundant casts
 warn_redundant_casts = true
 
+[[tool.mypy.overrides]]
+module = ["pytz.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["ton_txns_data_conv", "tests"]
 pythonpath = ["."]
@@ -112,6 +118,7 @@ addopts = "--cov=ton_txns_data_conv --cov-report=term-missing --cov-report=html"
 [tool.coverage.run]
 source = ["ton_txns_data_conv"]
 omit = ["ton_txns_data_conv/staking/ton_whales_staking_dashboard.py"]
+branch = true
 
 [tool.coverage.report]
 exclude_lines = [
