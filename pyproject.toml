@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ton-txns-data-conv"
-version = "0.1.3"
+version = "0.1.4"
 description = "The TON Transactions data converter is a project aimed at retrieving and converting transaction data recorded on the TON blockchain."
 authors = ["7rikazhexde"]
 license = "MIT"
