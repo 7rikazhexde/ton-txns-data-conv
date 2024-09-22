@@ -6,17 +6,26 @@ The TON Transactions data converter is a project aimed at retrieving and convert
 
 ## Pytest Coverage Comment
 
-[![Test Summary](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_summary.yml) [![Coverage Status](https://img.shields.io/badge/Coverage-check%20here-blue.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/tree/coverage)
+[![Test Multi-OS](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_multi_os.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_multi_os.yml) [![Coverage Status](https://img.shields.io/badge/Coverage-check%20here-blue.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/tree/coverage)
 
 ## pytest-html
 
-[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/ubuntu-latest/report_page.html) [![macos-12](https://img.shields.io/badge/macos_12-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/macos-12/report_page.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-success)](https://7rikazhexde.github.io/ton-txns-data-conv/windows-latest/report_page.html)
+[![pytest-html Report and Deploy Multi-OS](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_pytest-cov-report_deploy_multi_os.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_pytest-cov-report_deploy_multi_os.yml)
+
+[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-brightgreen)](https://7rikazhexde.github.io/ton-txns-data-conv/pytest-html-report_ubuntu-latest/report_page.html) [![macos-13](https://img.shields.io/badge/macos_13-url-ff69b4)](https://7rikazhexde.github.io/ton-txns-data-conv/pytest-html-report_macos-13/report_page.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-blue)](https://7rikazhexde.github.io/ton-txns-data-conv/pytest-html-report_windows-latest/report_page.html)
+
+## pytest-cov
+
+[![pytest-cov Report and Deploy Multi-OS](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_pytest-html-report_deploy_multi_os.yml/badge.svg)](https://github.com/7rikazhexde/ton-txns-data-conv/actions/workflows/test_pytest-html-report_deploy_multi_os.yml)
+
+[![ubuntu_latest](https://img.shields.io/badge/ubuntu_latest-url-brightgreen)](https://7rikazhexde.github.io/ton-txns-data-conv/pytest-cov-report_ubuntu-latest/index.html) [![macos-13](https://img.shields.io/badge/macos_13-url-ff69b4)](https://7rikazhexde.github.io/ton-txns-data-conv/pytest-cov-report_macos-13/index.html) [![windows-latest](https://img.shields.io/badge/windows_latest-url-blue)](https://7rikazhexde.github.io/ton-txns-data-conv/pytest-cov-report_windows-latest/index.html)
 
 ## Table of contents
 
 - [ton-txns-data-conv](#ton-txns-data-conv)
   - [Pytest Coverage Comment](#pytest-coverage-comment)
   - [pytest-html](#pytest-html)
+  - [pytest-cov](#pytest-cov)
   - [Table of contents](#table-of-contents)
   - [Usage](#usage)
     - [Install](#install)

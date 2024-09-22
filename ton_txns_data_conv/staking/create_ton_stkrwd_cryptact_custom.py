@@ -1,12 +1,14 @@
 import datetime
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
 import pandas as pd
+import pytz
 
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
+
 
 from ton_txns_data_conv.account.get_ton_txns_api import (
     get_transactions_v3,
@@ -16,7 +18,7 @@ from ton_txns_data_conv.utils.config_loader import load_config
 
 
 def create_cryptact_custom_data(
-    transaction: Dict[str, Any],
+    transaction: Dict[str, Any], transaction_timezone: str = "Asia/Tokyo"
 ) -> Optional[List[Union[str, int, float]]]:
     in_msg = transaction.get("in_msg", {})
     txn_val = in_msg.get("value")
@@ -24,23 +26,31 @@ def create_cryptact_custom_data(
 
     if txn_val and int(txn_val) != 0:
         txn_hash = transaction["hash"]
-        local_time = datetime.datetime.fromtimestamp(
-            int(transaction[timestamp_field])
-        ).strftime("%Y/%m/%d %H:%M:%S")
+
+        # Use timezone-aware datetime
+        utc_time = datetime.datetime.fromtimestamp(
+            int(transaction[timestamp_field]), datetime.timezone.utc
+        )
+        tz = pytz.timezone(transaction_timezone)
+        local_time = utc_time.astimezone(tz)
+        time_str = local_time.strftime("%Y/%m/%d %H:%M:%S")
         value_ton = f"{nano_to_amount(int(txn_val)):.9f}"
 
-        return [
-            f"'{local_time}",
-            "STAKING",
-            "TON_WALLET",
-            "TON",
-            value_ton,
-            "",
-            "JPY",
-            0,
-            "TON",
-            f"TON_TXN_HASH: {txn_hash}",
-        ]
+        return cast(
+            List[Union[str, int, float]],
+            [
+                f"'{time_str}",
+                "STAKING",
+                "TON_WALLET",
+                "TON",
+                value_ton,
+                "",
+                "JPY",
+                0,
+                "TON",
+                f"TON_TXN_HASH: {txn_hash}",
+            ],
+        )
     return None
 
 

@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 
-def pytest_ignore_collect(path: Union[str, Path], config: Any) -> bool:
+def pytest_ignore_collect(collection_path: Path, config: Any) -> bool:
     """
     特定のファイルをテスト収集から除外するための pytest フック関数。
 
@@ -13,11 +13,11 @@ def pytest_ignore_collect(path: Union[str, Path], config: Any) -> bool:
     注意: このファイルはカバレッジレポートからも除外されています（pyproject.toml の設定による）。
 
     Args:
-        path (Union[str, Path]): チェック対象のファイルパス
+        collection_path (Path): チェック対象のファイルパス
         config (Any): pytest の設定オブジェクト（この関数では使用しない）
 
     Returns:
         bool: 指定されたパスが除外対象の場合は True、そうでない場合は False
     """
     excluded_file = Path("ton_txns_data_conv/staking/ton_whales_staking_dashboard.py")
-    return excluded_file.parts[-3:] == Path(path).parts[-3:]
+    return excluded_file.parts[-3:] == collection_path.parts[-3:]

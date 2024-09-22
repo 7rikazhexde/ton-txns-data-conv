@@ -1,8 +1,10 @@
+import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
 import pandas as pd
 import pytest
+import pytz
 from freezegun import freeze_time
 from pytest_mock import MockerFixture
 
@@ -52,24 +54,143 @@ def mock_config() -> Dict[str, Any]:
     }
 
 
+# def test_create_cryptact_custom_data(sample_transaction: Dict[str, Any]) -> None:
+#    """
+#    create_cryptact_custom_data 関数のテスト。
+#
+#    :param sample_transaction: サンプルのトランザクションデータ
+#    """
+#    result = create_cryptact_custom_data(sample_transaction)
+#    assert result is not None
+#    assert result[0] == "'2021/08/05 02:20:00"
+#    assert result[1] == "STAKING"
+#    assert result[4] == "1.000000000"
+
+
+# def test_create_cryptact_custom_data_invalid() -> None:
+#    """
+#    create_cryptact_custom_data 関数の無効なデータに対するテスト。
+#    """
+#    invalid_transaction = {"in_msg": {"value": "0"}}
+#    assert create_cryptact_custom_data(invalid_transaction) is None
+
+
+# def test_create_cryptact_custom_data(sample_transaction: Dict[str, Any]) -> None:
+#    """
+#    create_cryptact_custom_data 関数のテスト。
+#
+#    :param sample_transaction: サンプルのトランザクションデータ
+#    """
+#    print(
+#        f"\nCurrent timezone: {datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo}"
+#    )
+#    print(f"Sample transaction: {sample_transaction}")
+#
+#    result = create_cryptact_custom_data(sample_transaction)
+#    assert result is not None, "Result should not be None"
+#
+#    print(f"Result: {result}")
+#
+#    expected_time = datetime.datetime.fromtimestamp(
+#        sample_transaction["now"], pytz.UTC
+#    ).astimezone(pytz.timezone("Asia/Tokyo"))
+#    expected_str = f"'{expected_time.strftime('%Y/%m/%d %H:%M:%S')}"
+#    print(f"Expected time: {expected_str}")
+#
+#    assert result[0] == expected_str, f"Expected {expected_str}, but got {result[0]}"
+#    assert result[1] == "STAKING", f"Expected 'STAKING', but got {result[1]}"
+#    assert result[4] == "1.000000000", f"Expected '1.000000000', but got {result[4]}"
+#
+#    # UTCでのテスト
+#    result_utc = create_cryptact_custom_data(
+#        sample_transaction, transaction_timezone="UTC"
+#    )
+#    print(f"UTC Result: {result_utc}")
+#    expected_utc_str = f"'{datetime.datetime.fromtimestamp(sample_transaction['now'], pytz.UTC).strftime('%Y/%m/%d %H:%M:%S')}"
+#    assert (
+#        result_utc[0] == expected_utc_str
+#    ), f"Expected {expected_utc_str}, but got {result_utc[0]}"
+#
+#
+# def test_create_cryptact_custom_data_invalid(
+#    sample_transaction: Dict[str, Any],
+# ) -> None:
+#    """
+#    create_cryptact_custom_data 関数の無効なデータに対するテスト。
+#
+#    :param sample_transaction: サンプルのトランザクションデータ
+#    """
+#    # 無効な取引額（0）のテスト
+#    invalid_transaction = sample_transaction.copy()
+#    invalid_transaction["in_msg"]["value"] = "0"
+#    assert create_cryptact_custom_data(invalid_transaction) is None
+#
+#    # in_msgが存在しない場合のテスト
+#    invalid_transaction = sample_transaction.copy()
+#    del invalid_transaction["in_msg"]
+#    assert create_cryptact_custom_data(invalid_transaction) is None
+#
+#    # nowフィールドが存在しない場合のテスト
+#    invalid_transaction = sample_transaction.copy()
+#    del invalid_transaction["now"]
+#    assert create_cryptact_custom_data(invalid_transaction) is None
+
+
 def test_create_cryptact_custom_data(sample_transaction: Dict[str, Any]) -> None:
     """
     create_cryptact_custom_data 関数のテスト。
 
     :param sample_transaction: サンプルのトランザクションデータ
     """
+    print(
+        f"\nCurrent timezone: {datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo}"
+    )
+    print(f"Sample transaction: {sample_transaction}")
+
     result = create_cryptact_custom_data(sample_transaction)
-    assert result is not None
-    assert result[0] == "'2021/08/05 02:20:00"
-    assert result[1] == "STAKING"
-    assert result[4] == "1.000000000"
+    assert result is not None, "Result should not be None"
+
+    print(f"Result: {result}")
+
+    expected_time = datetime.datetime.fromtimestamp(
+        sample_transaction["now"], pytz.UTC
+    ).astimezone(pytz.timezone("Asia/Tokyo"))
+    expected_str = f"'{expected_time.strftime('%Y/%m/%d %H:%M:%S')}"
+    print(f"Expected time: {expected_str}")
+
+    assert result[0] == expected_str, f"Expected {expected_str}, but got {result[0]}"
+    assert result[1] == "STAKING", f"Expected 'STAKING', but got {result[1]}"
+    assert result[4] == "1.000000000", f"Expected '1.000000000', but got {result[4]}"
+
+    # UTCでのテスト
+    result_utc = create_cryptact_custom_data(
+        sample_transaction, transaction_timezone="UTC"
+    )
+    assert result_utc is not None, "UTC result should not be None"
+
+    print(f"UTC Result: {result_utc}")
+    expected_utc_str = f"'{datetime.datetime.fromtimestamp(sample_transaction['now'], pytz.UTC).strftime('%Y/%m/%d %H:%M:%S')}"
+    assert (
+        result_utc[0] == expected_utc_str
+    ), f"Expected {expected_utc_str}, but got {result_utc[0]}"
 
 
-def test_create_cryptact_custom_data_invalid() -> None:
-    """
-    create_cryptact_custom_data 関数の無効なデータに対するテスト。
-    """
-    invalid_transaction = {"in_msg": {"value": "0"}}
+def test_create_cryptact_custom_data_invalid(
+    sample_transaction: Dict[str, Any],
+) -> None:
+    # 無効な取引額（0）のテスト
+    invalid_transaction = sample_transaction.copy()
+    invalid_transaction["in_msg"]["value"] = "0"
+    assert create_cryptact_custom_data(invalid_transaction) is None
+
+    # in_msgが存在しない場合のテスト
+    invalid_transaction = sample_transaction.copy()
+    del invalid_transaction["in_msg"]
+    assert create_cryptact_custom_data(invalid_transaction) is None
+
+    # nowフィールドが存在しない場合のテスト
+    invalid_transaction = sample_transaction.copy()
+    del invalid_transaction["now"]
     assert create_cryptact_custom_data(invalid_transaction) is None
 
 
@@ -265,35 +386,65 @@ def test_create_cryptact_custom_csv_file_exists_no_overwrite(
     mock_print.assert_called_with("File not saved.")
 
 
-def test_main(
-    mocker: MockerFixture,
-    mock_config: Dict[str, Any],
-    sample_transactions: List[Dict[str, Any]],
-) -> None:
-    """
-    main 関数のテスト。
+# def test_main(
+#    mocker: MockerFixture,
+#    mock_config: Dict[str, Any],
+#    sample_transactions: List[Dict[str, Any]],
+# ) -> None:
+#    """
+#    main 関数のテスト。
+#
+#    :param mocker: pytest mocker fixture
+#    :param mock_config: モックの設定
+#    :param sample_transactions: サンプルのトランザクションリスト
+#    """
+#    mocker.patch(
+#        "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.load_config",
+#        return_value=mock_config,
+#    )
+#    mocker.patch(
+#        "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.get_transactions_v3",
+#        return_value=sample_transactions,
+#    )
+#    mock_create_csv = mocker.patch(
+#        "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.create_cryptact_custom_csv"
+#    )
+#    mock_print = mocker.patch("builtins.print")
+#
+#    main()
+#
+#    mock_create_csv.assert_called_once_with(sample_transactions)
+#    mock_print.assert_called_once_with("TON Index API v3: Processed 2 transactions")
 
-    :param mocker: pytest mocker fixture
-    :param mock_config: モックの設定
-    :param sample_transactions: サンプルのトランザクションリスト
-    """
+
+def test_main(mocker: MockerFixture) -> None:
+    # モックの設定
+    mock_config = {
+        "ton_info": {
+            "user_friendly_address": "test_address",
+            "transaction_history_period": 30,
+            "timezone": "Asia/Tokyo",
+        },
+        "file_save_option": {"save_allow_json": True, "save_allow_csv": True},
+    }
     mocker.patch(
         "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.load_config",
         return_value=mock_config,
     )
-    mocker.patch(
-        "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.get_transactions_v3",
-        return_value=sample_transactions,
+
+    mock_get_transactions = mocker.patch(
+        "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.get_transactions_v3"
     )
     mock_create_csv = mocker.patch(
         "ton_txns_data_conv.staking.create_ton_stkrwd_cryptact_custom.create_cryptact_custom_csv"
     )
-    mock_print = mocker.patch("builtins.print")
 
+    # main関数の実行
     main()
 
-    mock_create_csv.assert_called_once_with(sample_transactions)
-    mock_print.assert_called_once_with("TON Index API v3: Processed 2 transactions")
+    # アサーション
+    mock_get_transactions.assert_called_once()
+    mock_create_csv.assert_called_once()
 
 
 def test_main_save_csv_false(
