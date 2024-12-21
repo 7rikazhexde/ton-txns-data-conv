@@ -45,7 +45,6 @@ TON トランザクションデータコンバーターは、TONブロックチ�
 > このプロジェクトでは以下のプロジェクトを使用しています。
 >
 > - `TON API`: <https://tonapi.io/>
-> - `pytonapi`: <https://github.com/tonkeeper/pytonapi>
 > - `pytoniq_core`: <https://github.com/yungwine/pytoniq>
 > - `TON Index(API V3)`: <https://toncenter.com/api/v3/>
 > - `ton-api-v4`: <https://github.com/ton-community/ton-api-v4>
@@ -85,9 +84,6 @@ pip install -r requirements.txt requirements-dev.txt
 ### プロジェクト設定
 
 プロジェクトのユーザー情報を[config.toml](./ton_txns_data_conv/config.toml)で編集してください。
-このファイルには、`TON APIキー`[^1]、TONアドレス、ファイル保存オプションの設定が含まれています。
-[^1]: pytonapiライブラリを使用する際に必要ですが、最新版コードでは`TON Index(API V3)`に変更しているため将来的に削除する可能性があります。
-      詳細は <https://docs.tonconsole.com/tonapi> をご確認ください。
 
 ## 機能
 

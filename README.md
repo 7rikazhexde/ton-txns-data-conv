@@ -45,7 +45,6 @@ The TON Transactions data converter is a project aimed at retrieving and convert
 > This project uses the following projects:
 >
 > - `TON API`: <https://tonapi.io/>
-> - `pytonapi`: <https://github.com/tonkeeper/pytonapi>
 > - `pytoniq_core`: <https://github.com/yungwine/pytoniq>
 > - `TON Index(API V3)`: <https://toncenter.com/api/v3/>
 > - `ton-api-v4`: <https://github.com/ton-community/ton-api-v4>
@@ -85,9 +84,6 @@ pip install -r requirements.txt requirements-dev.txt
 ### Project settings
 
 Edit [config.toml](./ton_txns_data_conv/config.toml) with your user information for the project.  
-This file contains settings for your `TON API key`[^1], TON address, and file saving options.  
-[^1]: Required when using the pytonapi library, but may be removed in the future as the latest version of the code changes it to `TON Index(API V3)`.
-      Please check for details <https://docs.tonconsole.com/tonapi>
 
 ## Feature
 
